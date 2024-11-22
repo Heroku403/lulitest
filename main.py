@@ -94,9 +94,9 @@ async def fetch_leaderboard():
 
 # Leaderboard command handler for Telegram bot
 @bot.message_handler(commands=['leaderboard'])
-def leaderboard(message: Message):
+async def leaderboard(message: Message):
     try:
-        leaderboard_data = asyncio.run(fetch_leaderboard())
+        leaderboard_data = await fetch_leaderboard()  # directly await the async function
         if not leaderboard_data:
             msg = "No scores available yet."
         else:
@@ -113,6 +113,7 @@ def leaderboard(message: Message):
         bot.send_message(message.chat.id, msg, parse_mode="Markdown")
     except Exception as e:
         bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
+
 
 
 # Run the Telegram bot in a separate thread
