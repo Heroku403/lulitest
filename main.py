@@ -7,7 +7,6 @@ import uvicorn
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
 from motor.motor_asyncio import AsyncIOMotorClient
-import threading
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -101,12 +100,8 @@ async def leaderboard(update: Update, context: CallbackContext) -> None:
     except Exception as e:
         await update.message.reply_text(f"Error fetching leaderboard: {str(e)}")
 
-# Run the Telegram bot in a separate thread
-def run_bot():
-    # Create a new asyncio event loop for the new thread
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
+# Run the Telegram bot asynchronously in the same event loop as FastAPI
+async def run_telegram_bot():
     # Initialize the bot application
     application = Application.builder().token(bot_token).build()
 
@@ -115,16 +110,27 @@ def run_bot():
     application.add_handler(CommandHandler("leaderboard", leaderboard))
 
     # Start polling the bot (this will run asynchronously)
-    loop.run_until_complete(application.run_polling())
+    await application.run_polling()
 
-# Start the bot in a separate thread to avoid blocking FastAPI
-def start_bot_in_thread():
-    thread = threading.Thread(target=run_bot, daemon=True)
-    thread.start()
+# Run FastAPI and the Telegram bot in the same event loop
+async def main():
+    # Start FastAPI in the background
+    from fastapi import FastAPI
+    import uvicorn
+    from threading import Thread
 
-# Start the bot in a separate thread when FastAPI is running
-start_bot_in_thread()
+    # Run FastAPI app in a background thread
+    def start_fastapi():
+        uvicorn.run(app, host="0.0.0.0", port=10000)
 
-# Run FastAPI app
+    # Run FastAPI in a separate thread
+    fastapi_thread = Thread(target=start_fastapi)
+    fastapi_thread.daemon = True
+    fastapi_thread.start()
+
+    # Run the Telegram bot in the same event loop as FastAPI
+    await run_telegram_bot()
+
+# Entry point for running the app
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=10000, reload=True)
+    asyncio.run(main())
