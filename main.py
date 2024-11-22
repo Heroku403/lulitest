@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from fastapi import FastAPI, Request, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks
 from pydantic import BaseModel
 import uvicorn
 import telebot
@@ -72,6 +72,11 @@ async def insert_score_to_db(user_data: UserData):
     except Exception as e:
         logger.error(f"Error inserting score for {user_data.first_name}: {e}")
 
+# Start command handler for Telegram bot
+@bot.message_handler(commands=['start'])
+def start(message):
+    bot.send_message(message.chat.id, "Welcome!")
+
 # Function to fetch leaderboard from MongoDB (async)
 async def fetch_leaderboard():
     pipeline = [
@@ -87,18 +92,11 @@ async def fetch_leaderboard():
         logger.error(f"Error fetching leaderboard: {str(e)}")
         return None
 
-# Start command handler for Telegram bot
-@bot.message_handler(commands=['start'])
-def start(message):
-    bot.send_message(message.chat.id, "Welcome!")
-
 # Leaderboard command handler for Telegram bot
 @bot.message_handler(commands=['leaderboard'])
 def leaderboard(message: Message):
     try:
-        # Run the async fetch_leaderboard function using the event loop
         leaderboard_data = asyncio.run(fetch_leaderboard())
-
         if not leaderboard_data:
             msg = "No scores available yet."
         else:
@@ -111,14 +109,11 @@ def leaderboard(message: Message):
                     emoji = "🥈"
                 elif i == 2:
                     emoji = "🥉"
-                
-                # Directly include the name and score without escaping special characters
                 msg += f"{i+1}. {entry['name']} {emoji} - {entry['score']}\n"
-
-        # Send the message with MarkdownV2 formatting
         bot.send_message(message.chat.id, msg, parse_mode="Markdown")
     except Exception as e:
         bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
+
 
 # Run the Telegram bot in a separate thread
 def run_bot():
