@@ -92,6 +92,7 @@ async def leaderboard(message):  # Make this function async
     except Exception as e:
         bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
 
+
 # Run the Telegram bot in a separate thread
 def run_bot():
     bot.polling()
