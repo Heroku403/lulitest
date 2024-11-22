@@ -5,6 +5,7 @@ import telebot
 from pymongo import MongoClient
 from telebot import types
 from fastapi.middleware.cors import CORSMiddleware
+from motor.motor_asyncio import AsyncIOMotorClient
 
 
 
@@ -17,7 +18,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 bot = telebot.TeleBot("6450878640:AAEkDXKORJvv-530GfG6OZYnZxfZgJ9f_FA")
-client = MongoClient("mongodb+srv://itachiuchihablackcops:5412ascs@gamebot.dfp9j.mongodb.net/?retryWrites=true&w=majority&appName=GameBot")
+client = AsyncIOMotorClient("mongodb+srv://itachiuchihablackcops:5412ascs@gamebot.dfp9j.mongodb.net/?retryWrites=true&w=majority&appName=GameBot")
 db = client["skgamebot"]
 collection = db["flappybird"]
 
