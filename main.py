@@ -111,14 +111,6 @@ async def fetch_leaderboard():
         logger.error(f"Error fetching leaderboard: {str(e)}")
         return None
 
-# Start command handler for Telegram bot
-@bot.message_handler(commands=['start'])
-def start(message):
-    bot.send_message(message.chat.id, "Welcome!")
-
-
-
-
 # Leaderboard command handler for Telegram bot
 @bot.message_handler(commands=['leaderboard'])
 def leaderboard(message: Message):
