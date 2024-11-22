@@ -9,6 +9,8 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi.middleware.cors import CORSMiddleware
 import threading
 import os
+import re
+
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -81,11 +83,22 @@ async def fetch_leaderboard():
 def start(message):
     bot.send_message(message.chat.id, "Welcome!")
 
+
+
+
+# Function to escape MarkdownV2 special characters
+def escape_markdown_v2(text: str) -> str:
+    # Define a list of special characters to escape in MarkdownV2
+    special_chars = r'[_*[\]()~`>#+-=|{}.!]'
+
+    # Escape each special character by adding a backslash before it
+    return re.sub(f'([{"".join(special_chars)}])', r'\\\1', text)
+
 # Leaderboard command handler for Telegram bot
 @bot.message_handler(commands=['leaderboard'])
 def leaderboard(message: Message):
     try:
-        # Run the async fetch_leaderboard function in the main event loop using asyncio.run
+        # Run the async fetch_leaderboard function
         leaderboard_data = asyncio.run(fetch_leaderboard())
 
         if not leaderboard_data:
@@ -100,11 +113,20 @@ def leaderboard(message: Message):
                     emoji = "🥈"
                 elif i == 2:
                     emoji = "🥉"
-                msg += f"{i+1}. **{entry['name']}** {emoji} - {entry['score']}\n"
+                
+                # Escape any special characters in the name or score
+                name = escape_markdown_v2(entry['name'])
+                score = escape_markdown_v2(str(entry['score']))
 
+                msg += f"{i+1}. **{name}** {emoji} - {score}\n"
+
+        # Send the message with escaped special characters in MarkdownV2 format
         bot.send_message(message.chat.id, msg, parse_mode="MarkdownV2")
     except Exception as e:
         bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
+
+
+
 
 # Run the Telegram bot in a separate thread
 def run_bot():
