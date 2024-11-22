@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 
 # Telegram bot setup with aiogram
-bot_token = "YOUR_BOT_TOKEN"
+bot_token = "6450878640:AAEkDXKORJvv-530GfG6OZYnZxfZgJ9f_FA"
 bot = Bot(token=bot_token, parse_mode="Markdown")  # Use "Markdown" instead of ParseMode.MARKDOWN
 
 # Initialize Dispatcher with bot
