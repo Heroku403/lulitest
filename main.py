@@ -5,13 +5,12 @@ from pydantic import BaseModel
 import uvicorn
 from aiogram import Bot, types
 from aiogram.filters import Command
+from aiogram.types import ParseMode
 from aiogram import Router
-from aiogram.fsm.context import FSMContext
-from aiogram.utils import executor
+import threading
+import os
 from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi.middleware.cors import CORSMiddleware
-import os
-import threading
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -124,8 +123,8 @@ async def on_start():
 # Run the Telegram bot in a separate thread
 def run_bot():
     asyncio.run(on_start())
-    from aiogram import executor
-    executor.start_polling(bot)
+    from aiogram import run_polling
+    run_polling(bot)  # Use aiogram's run_polling directly to start the bot
 
 # Start the bot in a separate thread to avoid blocking FastAPI
 threading.Thread(target=run_bot, daemon=True).start()
