@@ -1,6 +1,4 @@
-
 import asyncio
-
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
 import uvicorn
@@ -80,14 +78,23 @@ def leaderboard(message):  # Keep this function synchronous
         if not leaderboard_data:
             msg = "No scores available yet."
         else:
-            msg = "Leaderboard:\n"
+            msg = "Flappy Bird Leaderboard:\n"
             for i, entry in enumerate(leaderboard_data):
-                msg += f"{i+1}. {entry['name']} - {entry['score']}\n"
+                # Adding crown and medals for top 3 players
+                if i == 0:
+                    emoji = "👑"  # Crown for 1st place
+                elif i == 1:
+                    emoji = "🥈"  # Silver for 2nd place
+                elif i == 2:
+                    emoji = "🥉"  # Bronze for 3rd place
+                else:
+                    emoji = ""  # No emoji for others
+                
+                msg += f"{i+1}. **{entry['name']}** {emoji} - {entry['score']}\n"
 
         bot.send_message(message.chat.id, msg)
     except Exception as e:
         bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
-
 
 # Function to fetch leaderboard from MongoDB (async)
 async def fetch_leaderboard():
