@@ -1,23 +1,23 @@
 import logging
 import asyncio
-from fastapi import FastAPI, BackgroundTasks, HTTPException
-from pydantic import BaseModel
-import uvicorn
-from aiogram import Bot, types
-from aiogram.filters import Command
-from aiogram import Router
-import threading
 import os
+from fastapi import FastAPI, BackgroundTasks, HTTPException
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import ParseMode
+from aiogram.filters import Command
+from aiogram.utils import executor
+from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi.middleware.cors import CORSMiddleware
+import threading
 
-# Initialize FastAPI app
+# FastAPI app setup
 app = FastAPI()
 
-# Setup CORS middleware
+# Set up CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Allow all origins (change in production)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,10 +27,11 @@ app.add_middleware(
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Telegram bot setup (using aiogram 3.x)
+# Telegram bot setup (aiogram 3.x)
 bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
 bot = Bot(token=bot_token)
-router = Router()
+dp = Dispatcher(bot)
+dp.middleware.setup(LoggingMiddleware())
 
 # MongoDB setup
 client = AsyncIOMotorClient("mongodb+srv://itachiuchihablackcops:5412ascs@gamebot.dfp9j.mongodb.net/?retryWrites=true&w=majority&appName=GameBot")
@@ -74,27 +75,12 @@ async def insert_score_to_db(user_data: UserData):
         logger.error(f"Error inserting score for {user_data.first_name}: {e}")
 
 # Command handler for /start
-@router.message(Command("start"))
+@dp.message_handler(Command("start"))
 async def start(message: types.Message):
     await message.answer("Welcome!")
 
-# Function to fetch leaderboard from MongoDB (async)
-async def fetch_leaderboard():
-    pipeline = [
-        {"$sort": {"score": -1}},
-        {"$group": {"_id": "$user_id", "name": {"$first": "$first_name"}, "score": {"$max": "$score"}}},
-        {"$sort": {"score": -1}},
-        {"$limit": 10}
-    ]
-    try:
-        leaderboard = await collection.aggregate(pipeline).to_list(length=10)
-        return leaderboard
-    except Exception as e:
-        logger.error(f"Error fetching leaderboard: {str(e)}")
-        return None
-
 # Command handler for /leaderboard
-@router.message(Command("leaderboard"))
+@dp.message_handler(Command("leaderboard"))
 async def leaderboard(message: types.Message):
     try:
         leaderboard_data = await fetch_leaderboard()
@@ -111,24 +97,34 @@ async def leaderboard(message: types.Message):
                 elif i == 2:
                     emoji = "🥉"
                 msg += f"{i+1}. {entry['name']} {emoji} - {entry['score']}\n"
-        await message.answer(msg, parse_mode=types.ParseMode.MARKDOWN)
+        await message.answer(msg, parse_mode=ParseMode.MARKDOWN)
     except Exception as e:
         await message.answer(f"Error fetching leaderboard: {str(e)}")
 
-# Bot setup
-async def on_start():
-    bot.router.include_router(router)
+# Function to fetch leaderboard from MongoDB (async)
+async def fetch_leaderboard():
+    pipeline = [
+        {"$sort": {"score": -1}},
+        {"$group": {"_id": "$user_id", "name": {"$first": "$first_name"}, "score": {"$max": "$score"}}},
+        {"$sort": {"score": -1}},
+        {"$limit": 10}
+    ]
+    try:
+        leaderboard = await collection.aggregate(pipeline).to_list(length=10)
+        return leaderboard
+    except Exception as e:
+        logger.error(f"Error fetching leaderboard: {str(e)}")
+        return None
 
 # Run the Telegram bot in a separate thread
 def run_bot():
-    asyncio.run(on_start())  # Register handlers
-    from aiogram import run_polling  # Corrected, use aiogram.run_polling()
-    run_polling(bot)  # Use aiogram's run_polling directly to start the bot
-
-# Start the bot in a separate thread to avoid blocking FastAPI
-threading.Thread(target=run_bot, daemon=True).start()
+    loop = asyncio.get_event_loop()
+    loop.create_task(dp.start_polling())
 
 # Run FastAPI app
 if __name__ == "__main__":
-    # Avoid using `reload=True` for production/deployment
-    uvicorn.run(app, host="0.0.0.0", port=10000)  # removed `reload=True`
+    # Start the bot in a separate thread
+    threading.Thread(target=run_bot, daemon=True).start()
+
+    # Run FastAPI app
+    uvicorn.run(app, host="0.0.0.0", port=10000)
