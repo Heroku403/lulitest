@@ -121,12 +121,14 @@ def leaderboard(message: Message):
                 name = escape_markdown_v2(entry['name'])
                 score = escape_markdown_v2(str(entry['score']))
 
-                msg += f"{i+1}. **{name}** {emoji} - {score}\n"
+                # Remove bold formatting (no ** around the name)
+                msg += f"{i+1}. {name} {emoji} - {score}\n"
 
         # Send the message with escaped special characters in MarkdownV2 format
         bot.send_message(message.chat.id, msg, parse_mode="MarkdownV2")
     except Exception as e:
         bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
+
 
 
 
