@@ -97,7 +97,7 @@ def start(message):
 
 
 # Function to fetch leaderboard from MongoDB (async)
-def fetch_leaderboard():
+async def fetch_leaderboard():
     pipeline = [
         {"$sort": {"score": -1}},
         {"$group": {"_id": "$user_id", "name": {"$first": "$first_name"}, "score": {"$max": "$score"}}},
@@ -111,11 +111,11 @@ def fetch_leaderboard():
         logger.error(f"Error fetching leaderboard: {str(e)}")
         return None
 
-# Leaderboard command handler for Telegram bot
+# Leaderboard command handler for Telegram bot (async)
 @bot.message_handler(commands=['leaderboard'])
-def leaderboard(message: Message):
+async def leaderboard(message: Message):
     try:
-        leaderboard_data = fetch_leaderboard()
+        leaderboard_data = await fetch_leaderboard()  # Use await here
         if not leaderboard_data:
             msg = "No scores available yet."
         else:
@@ -129,9 +129,9 @@ def leaderboard(message: Message):
                 elif i == 2:
                     emoji = "🥉"
                 msg += f"{i+1}. {entry['name']} {emoji} - {entry['score']}\n"
-        bot.send_message(message.chat.id, msg, parse_mode="Markdown")
+        await bot.send_message(message.chat.id, msg, parse_mode="Markdown")
     except Exception as e:
-        bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
+        await bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
 
 
 
