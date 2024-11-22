@@ -103,14 +103,19 @@ async def leaderboard(update: Update, context: CallbackContext) -> None:
 
 # Run the Telegram bot in a separate thread
 def run_bot():
+    # Create a new asyncio event loop for the new thread
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    # Initialize the bot application
     application = Application.builder().token(bot_token).build()
 
     # Add command handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("leaderboard", leaderboard))
 
-    # Start polling
-    application.run_polling()
+    # Start polling the bot
+    loop.run_until_complete(application.run_polling())
 
 # Start the bot in a separate thread to avoid blocking FastAPI
 threading.Thread(target=run_bot, daemon=True).start()
