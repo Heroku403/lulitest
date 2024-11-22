@@ -69,7 +69,7 @@ def start(message):
 
 # Leaderboard command handler for Telegram bot
 @bot.message_handler(commands=['leaderboard'])
-def leaderboard(message):
+async def leaderboard(message):  # Make this function async
     try:
         # Aggregate pipeline to get top 10 unique user scores
         pipeline = [
