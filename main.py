@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, BackgroundTasks
 from pydantic import BaseModel
 import uvicorn
 import telebot
@@ -55,13 +55,22 @@ class UserData(BaseModel):
 
 # POST endpoint to update score
 @app.post("/flappybird-update-score")
-async def update_score(user_data: UserData):
+async def update_score(user_data: UserData, background_tasks: BackgroundTasks):
     try:
-        result = await collection.insert_one(user_data.dict())
-        return {"message": "Score updated successfully", "inserted_id": str(result.inserted_id)}
+        # Use background task to handle database insertion asynchronously
+        background_tasks.add_task(insert_score_to_db, user_data)
+        return {"message": "Score update request received."}
     except Exception as e:
         logger.error(f"Error updating score: {e}")
         return {"message": "Error updating score", "error": str(e)}
+
+# Background task to insert score in MongoDB
+async def insert_score_to_db(user_data: UserData):
+    try:
+        result = await collection.insert_one(user_data.dict())
+        logger.info(f"Score for {user_data.first_name} inserted with ID: {result.inserted_id}")
+    except Exception as e:
+        logger.error(f"Error inserting score for {user_data.first_name}: {e}")
 
 # Function to fetch leaderboard from MongoDB (async)
 async def fetch_leaderboard():
@@ -82,9 +91,6 @@ async def fetch_leaderboard():
 @bot.message_handler(commands=['start'])
 def start(message):
     bot.send_message(message.chat.id, "Welcome!")
-
-
-
 
 # Leaderboard command handler for Telegram bot
 @bot.message_handler(commands=['leaderboard'])
@@ -113,11 +119,6 @@ def leaderboard(message: Message):
         bot.send_message(message.chat.id, msg, parse_mode="Markdown")
     except Exception as e:
         bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
-
-
-
-
-
 
 # Run the Telegram bot in a separate thread
 def run_bot():
