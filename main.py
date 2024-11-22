@@ -5,7 +5,7 @@ from pydantic import BaseModel
 import uvicorn
 from aiogram import Bot, types
 from aiogram.filters import Command
-from aiogram.types import ParseMode
+from aiogram.utils.markdown import ParseMode
 from aiogram import Router
 from aiogram.fsm.context import FSMContext
 from aiogram.utils import executor
