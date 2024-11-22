@@ -130,4 +130,5 @@ threading.Thread(target=run_bot, daemon=True).start()
 
 # Run FastAPI app
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=10000, reload=True)
+    # Avoid using `reload=True` for production/deployment
+    uvicorn.run(app, host="0.0.0.0", port=10000)  # removed `reload=True`
