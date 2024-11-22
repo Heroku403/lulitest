@@ -1,6 +1,5 @@
 import logging
 import os
-import threading
 import uvicorn
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from aiogram import Bot, Dispatcher, types
@@ -121,21 +120,18 @@ async def fetch_leaderboard():
         logger.error(f"Error fetching leaderboard: {str(e)}")
         return None
 
-# Run the Telegram bot in a separate thread
-
-async def start_bot():
-    bot = Bot(token=bot_token, default=default_properties)
-    dp = Dispatcher(bot=bot)
-    await dp.start_polling()
-
-async def start_app():
-    # Start the FastAPI server
+# Run the Telegram bot and FastAPI app together
+async def run_bot_and_app():
+    # Start FastAPI server
     config = uvicorn.Config(app, host="0.0.0.0", port=10000)
     server = uvicorn.Server(config)
+
+    # Start Telegram bot polling in a task
+    asyncio.create_task(dp.start_polling())
+
+    # Run FastAPI app server
     await server.serve()
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.create_task(start_bot())  # Start bot polling as a separate task
-    loop.create_task(start_app())  # Start the FastAPI app
-    loop.run_forever()  # Run the event loop
+    # Use asyncio to run both the FastAPI app and the Telegram bot concurrently
+    asyncio.run(run_bot_and_app())
