@@ -122,17 +122,20 @@ async def fetch_leaderboard():
         return None
 
 # Run the Telegram bot in a separate thread
-def run_bot():
-    # Create a new event loop for this thread
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)  # Set the event loop for the thread
-    loop.create_task(dp.start_polling())  # Start polling directly
-    loop.run_forever()  # Run the event loop forever
 
-# Run FastAPI app
+async def start_bot():
+    bot = Bot(token=bot_token, default=default_properties)
+    dp = Dispatcher(bot=bot)
+    await dp.start_polling()
+
+async def start_app():
+    # Start the FastAPI server
+    config = uvicorn.Config(app, host="0.0.0.0", port=10000)
+    server = uvicorn.Server(config)
+    await server.serve()
+
 if __name__ == "__main__":
-    # Start the bot in a separate thread
-    threading.Thread(target=run_bot, daemon=True).start()
-
-    # Run FastAPI app
-    uvicorn.run(app, host="0.0.0.0", port=10000)
+    loop = asyncio.get_event_loop()
+    loop.create_task(start_bot())  # Start bot polling as a separate task
+    loop.create_task(start_app())  # Start the FastAPI app
+    loop.run_forever()  # Run the event loop
