@@ -6,3 +6,4 @@ motor
 pymongo
 python-dotenv
 aiogram
+python-telegram-bot
