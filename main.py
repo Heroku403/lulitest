@@ -5,11 +5,12 @@ from fastapi import FastAPI, BackgroundTasks, HTTPException
 from aiogram import Bot, Dispatcher, types
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
-from aiogram.utils import executor
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi.middleware.cors import CORSMiddleware
 import threading
+import uvicorn
+from pydantic import BaseModel  # Assuming you are using Pydantic for validation
 
 # FastAPI app setup
 app = FastAPI()
@@ -119,7 +120,7 @@ async def fetch_leaderboard():
 # Run the Telegram bot in a separate thread
 def run_bot():
     loop = asyncio.get_event_loop()
-    loop.create_task(dp.start_polling())
+    loop.create_task(dp.start_polling())  # Updated to use dp.start_polling()
 
 # Run FastAPI app
 if __name__ == "__main__":
