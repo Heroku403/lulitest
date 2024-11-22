@@ -5,7 +5,6 @@ from pydantic import BaseModel
 import uvicorn
 from aiogram import Bot, types
 from aiogram.filters import Command
-from aiogram.utils.markdown import ParseMode
 from aiogram import Router
 from aiogram.fsm.context import FSMContext
 from aiogram.utils import executor
@@ -114,7 +113,7 @@ async def leaderboard(message: types.Message):
                 elif i == 2:
                     emoji = "🥉"
                 msg += f"{i+1}. {entry['name']} {emoji} - {entry['score']}\n"
-        await message.answer(msg, parse_mode=ParseMode.MARKDOWN)
+        await message.answer(msg, parse_mode=types.ParseMode.MARKDOWN)
     except Exception as e:
         await message.answer(f"Error fetching leaderboard: {str(e)}")
 
