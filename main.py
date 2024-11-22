@@ -11,13 +11,30 @@ from pydantic import BaseModel
 import asyncio
 from aiogram.client.bot import DefaultBotProperties  # Import DefaultBotProperties
 
-# FastAPI app setup
+
+
+
+
+import logging
+import asyncio
+from fastapi import FastAPI, BackgroundTasks, HTTPException
+from pydantic import BaseModel
+import uvicorn
+from aiogram import Bot, types
+from aiogram.filters import Command
+from aiogram import Router
+import threading
+import os
+from motor.motor_asyncio import AsyncIOMotorClient
+from fastapi.middleware.cors import CORSMiddleware
+
+# Initialize FastAPI app
 app = FastAPI()
 
-# Set up CORS middleware
+# Setup CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins (change in production)
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,11 +44,10 @@ app.add_middleware(
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Telegram bot setup (aiogram 3.x)
+# Telegram bot setup (using aiogram 3.x)
 bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-
-# Set the default properties for the bot
-default_properties = DefaultBotProperties(parse_mode=ParseMode.MARKDOWN)
+bot = Bot(token=bot_token)
+router = Router()
 
 # MongoDB setup
 client = AsyncIOMotorClient("mongodb+srv://itachiuchihablackcops:5412ascs@gamebot.dfp9j.mongodb.net/?retryWrites=true&w=majority&appName=GameBot")
@@ -74,30 +90,35 @@ async def insert_score_to_db(user_data: UserData):
     except Exception as e:
         logger.error(f"Error inserting score for {user_data.first_name}: {e}")
 
-# Command handler for /start
-async def start(message: types.Message):
-    await message.answer("Welcome!")
 
-# Command handler for /leaderboard
-async def leaderboard(message: types.Message):
-    try:
-        leaderboard_data = await fetch_leaderboard()
-        if not leaderboard_data:
-            msg = "No scores available yet."
-        else:
-            msg = "Flappy Bird Leaderboard:\n"
-            for i, entry in enumerate(leaderboard_data):
-                emoji = ""
-                if i == 0:
-                    emoji = "👑"
-                elif i == 1:
-                    emoji = "🥈"
-                elif i == 2:
-                    emoji = "🥉"
-                msg += f"{i+1}. {entry['name']} {emoji} - {entry['score']}\n"
-        await message.answer(msg, parse_mode=ParseMode.MARKDOWN)
-    except Exception as e:
-        await message.answer(f"Error fetching leaderboard: {str(e)}")
+
+
+
+
+
+
+
+
+# Start command handler for Telegram bot
+@bot.message_handler(commands=['start'])
+def start(message):
+    bot.send_message(message.chat.id, "Welcome!")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Function to fetch leaderboard from MongoDB (async)
 async def fetch_leaderboard():
@@ -114,26 +135,54 @@ async def fetch_leaderboard():
         logger.error(f"Error fetching leaderboard: {str(e)}")
         return None
 
-# Run the Telegram bot and FastAPI app together
-async def run_bot_and_app():
-    # Initialize the bot and dispatcher here
-    bot = Bot(token=bot_token, default=default_properties)  # Bot initialization
-    dp = Dispatcher(bot=bot)  # Dispatcher initialization
+# Start command handler for Telegram bot
+@bot.message_handler(commands=['start'])
+def start(message):
+    bot.send_message(message.chat.id, "Welcome!")
 
-    # Add command handlers to the dispatcher
-    dp.message.register(start, Command("start"))
-    dp.message.register(leaderboard, Command("leaderboard"))
 
-    # Start FastAPI server
-    config = uvicorn.Config(app, host="0.0.0.0", port=10000)
-    server = uvicorn.Server(config)
 
-    # Start Telegram bot polling in a task
-    asyncio.create_task(dp.start_polling())  # Start polling directly in the background
 
-    # Run FastAPI app server
-    await server.serve()
+# Leaderboard command handler for Telegram bot
+@bot.message_handler(commands=['leaderboard'])
+def leaderboard(message: Message):
+    try:
+        # Run the async fetch_leaderboard function using the event loop
+        leaderboard_data = asyncio.run(fetch_leaderboard())
 
+        if not leaderboard_data:
+            msg = "No scores available yet."
+        else:
+            msg = "Flappy Bird Leaderboard:\n"
+            for i, entry in enumerate(leaderboard_data):
+                emoji = ""
+                if i == 0:
+                    emoji = "👑"
+                elif i == 1:
+                    emoji = "🥈"
+                elif i == 2:
+                    emoji = "🥉"
+                
+                # Directly include the name and score without escaping special characters
+                msg += f"{i+1}. {entry['name']} {emoji} - {entry['score']}\n"
+
+        # Send the message with MarkdownV2 formatting
+        bot.send_message(message.chat.id, msg, parse_mode="Markdown")
+    except Exception as e:
+        bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
+
+
+
+
+
+
+# Run the Telegram bot in a separate thread
+def run_bot():
+    bot.polling()
+
+# Start the bot in a separate thread to avoid blocking FastAPI
+threading.Thread(target=run_bot, daemon=True).start()
+
+# Run FastAPI app
 if __name__ == "__main__":
-    # Use asyncio to run both the FastAPI app and the Telegram bot concurrently
-    asyncio.run(run_bot_and_app())
+    uvicorn.run("main:app", host="0.0.0.0", port=10000, reload=True)
