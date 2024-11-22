@@ -116,7 +116,7 @@ async def fetch_leaderboard():
 async def leaderboard(message: Message):
     try:
         leaderboard_data = await fetch_leaderboard()  # Use await here
-        if not leaderboard_data:
+        if leaderboard_data is None or len(leaderboard_data) == 0:
             msg = "No scores available yet."
         else:
             msg = "Flappy Bird Leaderboard:\n"
@@ -132,6 +132,7 @@ async def leaderboard(message: Message):
         await bot.send_message(message.chat.id, msg, parse_mode="Markdown")
     except Exception as e:
         await bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
+        logger.error(f"Error in leaderboard handler: {str(e)}")
 
 
 
