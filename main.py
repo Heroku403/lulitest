@@ -63,6 +63,8 @@ async def update_score(user_data: UserData):
 
 # Function to fetch leaderboard from MongoDB (async)
 async def fetch_leaderboard():
+    logger.info("Fetching leaderboard from MongoDB...")
+    
     pipeline = [
         {"$sort": {"score": -1}},
         {"$group": {"_id": "$user_id", "name": {"$first": "$first_name"}, "score": {"$max": "$score"}}},
@@ -71,9 +73,10 @@ async def fetch_leaderboard():
     ]
     try:
         leaderboard = await collection.aggregate(pipeline).to_list(length=10)
+        logger.info(f"Leaderboard fetched successfully: {len(leaderboard)} entries")
         return leaderboard
     except Exception as e:
-        logger.error(f"Error fetching leaderboard: {str(e)}")
+        logger.error(f"Error fetching leaderboard from MongoDB: {str(e)}")
         return None
 
 # Start command handler for Telegram bot
@@ -85,10 +88,13 @@ def start(message):
 @bot.message_handler(commands=['leaderboard'])
 async def leaderboard(message: Message):
     try:
+        logger.info("Leaderboard command received")
+        
         # Fetch leaderboard asynchronously
         leaderboard_data = await fetch_leaderboard()
-
+        
         if not leaderboard_data:
+            logger.info("No leaderboard data found")
             msg = "No scores available yet."
         else:
             msg = "Flappy Bird Leaderboard:\n"
@@ -102,10 +108,13 @@ async def leaderboard(message: Message):
                     emoji = "🥉"
                 
                 msg += f"{i+1}. {entry['name']} {emoji} - {entry['score']}\n"
-
+        
         # Send the message with Markdown formatting
         bot.send_message(message.chat.id, msg, parse_mode="Markdown")
+        logger.info("Leaderboard message sent")
+
     except Exception as e:
+        logger.error(f"Error handling leaderboard command: {str(e)}")
         bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
 
 # Run the Telegram bot in a separate thread
