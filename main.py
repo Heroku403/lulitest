@@ -34,7 +34,9 @@ bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
 # Set the default properties for the bot
 default_properties = DefaultBotProperties(parse_mode=ParseMode.MARKDOWN)
 bot = Bot(token=bot_token, default=default_properties)  # Set default properties
-dp = Dispatcher(bot)
+
+# Dispatcher initialization in aiogram 3.x+
+dp = Dispatcher(bot=bot)  # Use keyword argument for bot
 
 # MongoDB setup
 client = AsyncIOMotorClient("mongodb+srv://itachiuchihablackcops:5412ascs@gamebot.dfp9j.mongodb.net/?retryWrites=true&w=majority&appName=GameBot")
