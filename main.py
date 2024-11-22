@@ -15,8 +15,8 @@ app = FastAPI()
 bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
 bot = Bot(token=bot_token)
 
-# Initialize the Dispatcher and pass the bot directly to it in aiogram 3.x
-dp = Dispatcher(bot)
+# Initialize Dispatcher without passing Bot to constructor
+dp = Dispatcher()
 
 # MongoDB setup
 client = AsyncIOMotorClient("mongodb+srv://itachiuchihablackcops:5412ascs@gamebot.dfp9j.mongodb.net/?retryWrites=true&w=majority&appName=GameBot")
