@@ -108,14 +108,20 @@ async def fetch_leaderboard():
         leaderboard = await collection.aggregate(pipeline).to_list(length=10)
         return leaderboard
     except Exception as e:
-        logger.error(f"Error fetching leaderboard: {str(e)}")
+        logging.error(f"Error fetching leaderboard: {str(e)}")
         return None
 
-# Leaderboard command handler for Telegram bot (async)
+# Leaderboard command handler for Telegram bot (sync)
 @bot.message_handler(commands=['leaderboard'])
-async def leaderboard(message: Message):
+def leaderboard(message: Message):
+    loop = asyncio.get_event_loop()
+
+    # Call the async function using asyncio.run_coroutine_threadsafe
+    future = asyncio.run_coroutine_threadsafe(fetch_leaderboard(), loop)
+
     try:
-        leaderboard_data = await fetch_leaderboard()  # Use await here
+        leaderboard_data = future.result()  # Get the result of the async function
+
         if leaderboard_data is None or len(leaderboard_data) == 0:
             msg = "No scores available yet."
         else:
@@ -129,11 +135,11 @@ async def leaderboard(message: Message):
                 elif i == 2:
                     emoji = "🥉"
                 msg += f"{i+1}. {entry['name']} {emoji} - {entry['score']}\n"
-        await bot.send_message(message.chat.id, msg, parse_mode="Markdown")
-    except Exception as e:
-        await bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
-        logger.error(f"Error in leaderboard handler: {str(e)}")
 
+        bot.send_message(message.chat.id, msg, parse_mode="Markdown")
+    except Exception as e:
+        bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
+        logging.error(f"Error in leaderboard handler: {str(e)}")
 
 
 
