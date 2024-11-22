@@ -85,13 +85,16 @@ def start(message):
     bot.send_message(message.chat.id, "Welcome!")
 
 # Leaderboard command handler for Telegram bot
+# Leaderboard command handler for Telegram bot (corrected)
 @bot.message_handler(commands=['leaderboard'])
-async def leaderboard(message: Message):
+def leaderboard(message: Message):
     try:
         logger.info("Leaderboard command received")
         
-        # Fetch leaderboard asynchronously
-        leaderboard_data = await fetch_leaderboard()
+        # Use an async event loop to fetch leaderboard
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        leaderboard_data = loop.run_until_complete(fetch_leaderboard())
         
         if not leaderboard_data:
             logger.info("No leaderboard data found")
@@ -116,6 +119,7 @@ async def leaderboard(message: Message):
     except Exception as e:
         logger.error(f"Error handling leaderboard command: {str(e)}")
         bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
+
 
 # Run the Telegram bot in a separate thread
 def run_bot():
