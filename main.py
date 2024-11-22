@@ -9,8 +9,6 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi.middleware.cors import CORSMiddleware
 import threading
 import os
-import re
-
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -83,15 +81,12 @@ async def fetch_leaderboard():
 def start(message):
     bot.send_message(message.chat.id, "Welcome!")
 
-
-
-
 # Leaderboard command handler for Telegram bot
 @bot.message_handler(commands=['leaderboard'])
-def leaderboard(message: Message):
+async def leaderboard(message: Message):
     try:
-        # Run the async fetch_leaderboard function using the event loop
-        leaderboard_data = asyncio.run(fetch_leaderboard())
+        # Fetch leaderboard asynchronously
+        leaderboard_data = await fetch_leaderboard()
 
         if not leaderboard_data:
             msg = "No scores available yet."
@@ -106,18 +101,12 @@ def leaderboard(message: Message):
                 elif i == 2:
                     emoji = "🥉"
                 
-                # Directly include the name and score without escaping special characters
                 msg += f"{i+1}. {entry['name']} {emoji} - {entry['score']}\n"
 
-        # Send the message with MarkdownV2 formatting
+        # Send the message with Markdown formatting
         bot.send_message(message.chat.id, msg, parse_mode="Markdown")
     except Exception as e:
         bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
-
-
-
-
-
 
 # Run the Telegram bot in a separate thread
 def run_bot():
