@@ -1,16 +1,13 @@
 import logging
 import asyncio
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 import uvicorn
 import telebot
 from telebot.types import Message
 from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi.middleware.cors import CORSMiddleware
-import threading
 import os
-import re
-
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -30,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 # Telegram bot setup
 bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-bot = telebot.TeleBot(bot_token)
+bot = telebot.AsyncTeleBot(bot_token)  # Use the AsyncTeleBot class
 
 # MongoDB setup
 client = AsyncIOMotorClient("mongodb+srv://itachiuchihablackcops:5412ascs@gamebot.dfp9j.mongodb.net/?retryWrites=true&w=majority&appName=GameBot")
@@ -75,8 +72,8 @@ async def insert_score_to_db(user_data: UserData):
 
 # Start command handler for Telegram bot
 @bot.message_handler(commands=['start'])
-def start(message):
-    bot.send_message(message.chat.id, "Welcome!")
+async def start(message):
+    await bot.send_message(message.chat.id, "Welcome!")
 
 # Function to fetch leaderboard from MongoDB (async)
 async def fetch_leaderboard():
@@ -111,19 +108,18 @@ async def leaderboard(message: Message):
                 elif i == 2:
                     emoji = "🥉"
                 msg += f"{i+1}. {entry['name']} {emoji} - {entry['score']}\n"
-        bot.send_message(message.chat.id, msg, parse_mode="Markdown")
+        await bot.send_message(message.chat.id, msg, parse_mode="Markdown")
     except Exception as e:
-        bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
+        await bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
 
+# Run the Telegram bot asynchronously
+async def run_bot():
+    await bot.polling(non_stop=True)
 
-
-# Run the Telegram bot in a separate thread
-def run_bot():
-    bot.polling()
-
-# Start the bot in a separate thread to avoid blocking FastAPI
-threading.Thread(target=run_bot, daemon=True).start()
-
-# Run FastAPI app
+# Start the bot and FastAPI in the same event loop
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=10000, reload=True)
+    loop = asyncio.get_event_loop()
+
+    # Run the Telegram bot and FastAPI app concurrently
+    loop.create_task(run_bot())
+    uvicorn.run(app, host="0.0.0.0", port=10000)
