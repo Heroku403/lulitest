@@ -75,12 +75,10 @@ async def insert_score_to_db(user_data: UserData):
         logger.error(f"Error inserting score for {user_data.first_name}: {e}")
 
 # Command handler for /start
-@dp.message(Command("start"))
 async def start(message: types.Message):
     await message.answer("Welcome!")
 
 # Command handler for /leaderboard
-@dp.message(Command("leaderboard"))
 async def leaderboard(message: types.Message):
     try:
         leaderboard_data = await fetch_leaderboard()
@@ -121,6 +119,10 @@ async def run_bot_and_app():
     # Initialize the bot and dispatcher here
     bot = Bot(token=bot_token, default=default_properties)  # Bot initialization
     dp = Dispatcher(bot=bot)  # Dispatcher initialization
+
+    # Add command handlers to the dispatcher
+    dp.message.register(start, Command("start"))
+    dp.message.register(leaderboard, Command("leaderboard"))
 
     # Start FastAPI server
     config = uvicorn.Config(app, host="0.0.0.0", port=10000)
