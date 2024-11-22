@@ -15,7 +15,12 @@ app = FastAPI()
 # Telegram bot setup with aiogram
 bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
 bot = Bot(token=bot_token)
-dp = Dispatcher(bot)
+
+# Initialize the Dispatcher in aiogram 3.x
+dp = Dispatcher()
+
+# Connect the Bot instance to the Dispatcher
+dp.update_types(bot)
 
 # MongoDB setup
 client = AsyncIOMotorClient("mongodb+srv://itachiuchihablackcops:5412ascs@gamebot.dfp9j.mongodb.net/?retryWrites=true&w=majority&appName=GameBot")
