@@ -10,6 +10,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import asyncio
+from aiogram.client.bot import DefaultBotProperties  # Import DefaultBotProperties
 
 # FastAPI app setup
 app = FastAPI()
@@ -29,7 +30,10 @@ logger = logging.getLogger(__name__)
 
 # Telegram bot setup (aiogram 3.x)
 bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-bot = Bot(token=bot_token, parse_mode=ParseMode.MARKDOWN)
+
+# Set the default properties for the bot
+default_properties = DefaultBotProperties(parse_mode=ParseMode.MARKDOWN)
+bot = Bot(token=bot_token, default=default_properties)  # Set default properties
 dp = Dispatcher(bot)
 
 # MongoDB setup
