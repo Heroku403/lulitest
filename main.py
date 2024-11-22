@@ -3,7 +3,7 @@ import asyncio
 import os
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import ParseMode
+from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from aiogram.utils import executor
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
