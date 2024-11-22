@@ -118,8 +118,8 @@ if __name__ == "__main__":
     # Ensure MongoDB connection before starting the server
     loop.run_until_complete(on_startup())
 
-    # Run FastAPI in the background
-    loop.create_task(uvicorn.run(app, host="0.0.0.0", port=10000, reload=True))
+    # Run FastAPI in the background with Uvicorn
+    loop.create_task(uvicorn.run("main:app", host="0.0.0.0", port=10000, reload=True))
 
     # Run aiogram bot with start_polling
     from aiogram import executor
