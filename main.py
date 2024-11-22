@@ -15,7 +15,7 @@ app = FastAPI()
 bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
 bot = Bot(token=bot_token)
 
-# Initialize Dispatcher without passing Bot to constructor
+# Initialize Dispatcher
 dp = Dispatcher()
 
 # MongoDB setup
@@ -67,14 +67,12 @@ async def fetch_leaderboard():
         logging.error(f"Error fetching leaderboard from MongoDB: {str(e)}")
         return None
 
-# /start command handler for Telegram bot
-@dp.message_handler(commands=['start'])
-async def start(message: Message):
+# Register /start command handler for Telegram bot
+async def on_start(message: Message):
     await message.answer("Welcome!")
 
-# /leaderboard command handler for Telegram bot
-@dp.message_handler(commands=['leaderboard'])
-async def leaderboard(message: Message):
+# Register /leaderboard command handler for Telegram bot
+async def on_leaderboard(message: Message):
     try:
         logging.info("Leaderboard command received")
         
@@ -104,6 +102,10 @@ async def leaderboard(message: Message):
     except Exception as e:
         logging.error(f"Error handling leaderboard command: {str(e)}")
         await message.answer(f"Error fetching leaderboard: {str(e)}")
+
+# Register message handlers using `register_message_handler`
+dp.message_handlers.register(on_start, commands=['start'])
+dp.message_handlers.register(on_leaderboard, commands=['leaderboard'])
 
 # Run FastAPI and aiogram together
 if __name__ == "__main__":
