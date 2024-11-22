@@ -5,7 +5,7 @@ from pydantic import BaseModel
 import uvicorn
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import Message
-from aiogram.utils import executor
+from aiogram.client.session.aiohttp import ClientSession
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 
@@ -106,9 +106,11 @@ async def leaderboard(message: Message):
 
 # Run FastAPI and aiogram together
 if __name__ == "__main__":
-    # Run FastAPI in the background
     loop = asyncio.get_event_loop()
+
+    # Run FastAPI in the background
     loop.create_task(uvicorn.run(app, host="0.0.0.0", port=10000, reload=True))
-    
+
     # Run aiogram bot
+    from aiogram import executor
     executor.start_polling(dp, skip_updates=True)
