@@ -7,6 +7,7 @@ import uvicorn
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
 from motor.motor_asyncio import AsyncIOMotorClient
+from threading import Thread
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -100,7 +101,7 @@ async def leaderboard(update: Update, context: CallbackContext) -> None:
     except Exception as e:
         await update.message.reply_text(f"Error fetching leaderboard: {str(e)}")
 
-# Run the Telegram bot asynchronously in the same event loop as FastAPI
+# Run the Telegram bot asynchronously
 async def run_telegram_bot():
     # Initialize the bot application
     application = Application.builder().token(bot_token).build()
@@ -112,18 +113,16 @@ async def run_telegram_bot():
     # Start polling the bot (this will run asynchronously)
     await application.run_polling()
 
-# Run FastAPI and the Telegram bot in the same event loop
+# Main entry function to run FastAPI and Telegram bot
 async def main():
-    # Start FastAPI in the background
+    # Start FastAPI in the background using uvicorn
     from fastapi import FastAPI
     import uvicorn
-    from threading import Thread
 
-    # Run FastAPI app in a background thread
+    # Run FastAPI app in the background using threading
     def start_fastapi():
         uvicorn.run(app, host="0.0.0.0", port=10000)
 
-    # Run FastAPI in a separate thread
     fastapi_thread = Thread(target=start_fastapi)
     fastapi_thread.daemon = True
     fastapi_thread.start()
@@ -133,4 +132,5 @@ async def main():
 
 # Entry point for running the app
 if __name__ == "__main__":
+    # Start the FastAPI app and Telegram bot with asyncio
     asyncio.run(main())
