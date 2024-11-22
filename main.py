@@ -97,7 +97,7 @@ def start(message):
 
 
 # Function to fetch leaderboard from MongoDB (async)
-async def fetch_leaderboard():
+def fetch_leaderboard():
     pipeline = [
         {"$sort": {"score": -1}},
         {"$group": {"_id": "$user_id", "name": {"$first": "$first_name"}, "score": {"$max": "$score"}}},
@@ -115,7 +115,7 @@ async def fetch_leaderboard():
 @bot.message_handler(commands=['leaderboard'])
 def leaderboard(message: Message):
     try:
-        leaderboard_data = asyncio.run(fetch_leaderboard())
+        leaderboard_data = fetch_leaderboard()
         if not leaderboard_data:
             msg = "No scores available yet."
         else:
