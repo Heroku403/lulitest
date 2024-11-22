@@ -4,8 +4,8 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import uvicorn
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import Message
 from aiogram.filters import Command
+from aiogram.types import Message
 from motor.motor_asyncio import AsyncIOMotorClient
 
 # Setup logging
@@ -16,9 +16,9 @@ app = FastAPI()
 
 # Telegram bot setup with aiogram
 bot_token = "6450878640:AAEkDXKORJvv-530GfG6OZYnZxfZgJ9f_FA"
-bot = Bot(token=bot_token)
+bot = Bot(token=bot_token, parse_mode=types.ParseMode.MARKDOWN)
 
-# Initialize Dispatcher
+# Initialize Dispatcher with bot
 dp = Dispatcher()
 
 # MongoDB setup
@@ -73,7 +73,7 @@ async def fetch_leaderboard():
 # /start command handler for Telegram bot
 @dp.message(Command("start"))
 async def start(message: Message):
-    await message.answer("Welcome!")
+    await message.answer("Welcome to the Flappy Bird Game Bot! Type /leaderboard to see the scores.")
 
 # /leaderboard command handler for Telegram bot
 @dp.message(Command("leaderboard"))
@@ -101,7 +101,7 @@ async def leaderboard(message: Message):
                 msg += f"{i+1}. {entry['name']} {emoji} - {entry['score']}\n"
         
         # Send the message with Markdown formatting
-        await message.answer(msg, parse_mode="Markdown")
+        await message.answer(msg)
         logging.info("Leaderboard message sent")
 
     except Exception as e:
@@ -112,15 +112,19 @@ async def leaderboard(message: Message):
 async def on_startup():
     await check_mongo_connection()
 
-if __name__ == "__main__":
+# Main entry point to start FastAPI and Telegram bot
+async def main():
     loop = asyncio.get_event_loop()
 
     # Ensure MongoDB connection before starting the server
-    loop.run_until_complete(on_startup())
+    await on_startup()
 
     # Run FastAPI in the background with Uvicorn
     loop.create_task(uvicorn.run("main:app", host="0.0.0.0", port=10000, reload=True))
 
     # Run aiogram bot with start_polling
-    from aiogram import executor
-    executor.start_polling(dp, skip_updates=True)
+    await dp.start_polling()
+
+if __name__ == "__main__":
+    # Start everything using asyncio
+    asyncio.run(main())
