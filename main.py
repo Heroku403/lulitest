@@ -114,11 +114,16 @@ def run_bot():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("leaderboard", leaderboard))
 
-    # Start polling the bot
+    # Start polling the bot (this will run asynchronously)
     loop.run_until_complete(application.run_polling())
 
 # Start the bot in a separate thread to avoid blocking FastAPI
-threading.Thread(target=run_bot, daemon=True).start()
+def start_bot_in_thread():
+    thread = threading.Thread(target=run_bot, daemon=True)
+    thread.start()
+
+# Start the bot in a separate thread when FastAPI is running
+start_bot_in_thread()
 
 # Run FastAPI app
 if __name__ == "__main__":
