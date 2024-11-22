@@ -7,8 +7,8 @@ from telebot import types
 
 # Initialize FastAPI app, Telegram bot, and MongoDB client
 app = FastAPI()
-bot = telebot.TeleBot("YOUR_BOT_TOKEN")
-client = MongoClient("#Replace Mongo Url")
+bot = telebot.TeleBot("6450878640:AAEkDXKORJvv-530GfG6OZYnZxfZgJ9f_FA")
+client = MongoClient("mongodb+srv://itachiuchihablackcops:5412ascs@gamebot.dfp9j.mongodb.net/?retryWrites=true&w=majority&appName=GameBot")
 db = client["lulli"]
 collection = db["flappybird"]
 
@@ -21,7 +21,7 @@ class UserData(BaseModel):
     user_id: str
 
 # Define POST endpoint
-@app.post("/update-score")
+@app.post("/flappybird-update-score")
 async def update_score(user_data: UserData):
     # Insert data into MongoDB collection
     result = collection.insert_one(user_data.dict())
