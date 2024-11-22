@@ -5,7 +5,6 @@ from pydantic import BaseModel
 import uvicorn
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import Message
-from aiogram.client.session.aiohttp import ClientSession
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 
@@ -16,11 +15,8 @@ app = FastAPI()
 bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
 bot = Bot(token=bot_token)
 
-# Initialize the Dispatcher in aiogram 3.x
-dp = Dispatcher()
-
-# Connect the Bot instance to the Dispatcher
-dp.update_types(bot)
+# Initialize the Dispatcher and pass the bot directly to it in aiogram 3.x
+dp = Dispatcher(bot)
 
 # MongoDB setup
 client = AsyncIOMotorClient("mongodb+srv://itachiuchihablackcops:5412ascs@gamebot.dfp9j.mongodb.net/?retryWrites=true&w=majority&appName=GameBot")
