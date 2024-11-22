@@ -123,8 +123,11 @@ async def fetch_leaderboard():
 
 # Run the Telegram bot in a separate thread
 def run_bot():
-    loop = asyncio.get_event_loop()
+    # Create a new event loop for this thread
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)  # Set the event loop for the thread
     loop.create_task(dp.start_polling())  # Start polling directly
+    loop.run_forever()  # Run the event loop forever
 
 # Run FastAPI app
 if __name__ == "__main__":
