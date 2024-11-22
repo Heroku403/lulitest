@@ -108,21 +108,17 @@ async def fetch_leaderboard():
         leaderboard = await collection.aggregate(pipeline).to_list(length=10)
         return leaderboard
     except Exception as e:
-        logging.error(f"Error fetching leaderboard: {str(e)}")
+        logger.error(f"Error fetching leaderboard: {str(e)}")
         return None
 
-# Leaderboard command handler for Telegram bot (sync)
+# Leaderboard command handler for Telegram bot
 @bot.message_handler(commands=['leaderboard'])
 def leaderboard(message: Message):
-    loop = asyncio.get_event_loop()
-
-    # Call the async function using asyncio.run_coroutine_threadsafe
-    future = asyncio.run_coroutine_threadsafe(fetch_leaderboard(), loop)
-
     try:
-        leaderboard_data = future.result()  # Get the result of the async function
+        # Run the async fetch_leaderboard function using the event loop
+        leaderboard_data = asyncio.run(fetch_leaderboard())
 
-        if leaderboard_data is None or len(leaderboard_data) == 0:
+        if not leaderboard_data:
             msg = "No scores available yet."
         else:
             msg = "Flappy Bird Leaderboard:\n"
@@ -134,12 +130,14 @@ def leaderboard(message: Message):
                     emoji = "🥈"
                 elif i == 2:
                     emoji = "🥉"
+                
+                # Directly include the name and score without escaping special characters
                 msg += f"{i+1}. {entry['name']} {emoji} - {entry['score']}\n"
 
+        # Send the message with MarkdownV2 formatting
         bot.send_message(message.chat.id, msg, parse_mode="Markdown")
     except Exception as e:
         bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
-        logging.error(f"Error in leaderboard handler: {str(e)}")
 
 
 
