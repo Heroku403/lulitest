@@ -1,34 +1,21 @@
 import logging
 import asyncio
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from pydantic import BaseModel
 import uvicorn
-import telebot
-from telebot.types import Message
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import Message
+from aiogram.utils import executor
 from motor.motor_asyncio import AsyncIOMotorClient
-from fastapi.middleware.cors import CORSMiddleware
-import threading
 import os
 
 # Initialize FastAPI app
 app = FastAPI()
 
-# Setup CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Initialize logger
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Telegram bot setup
+# Telegram bot setup with aiogram
 bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-bot = telebot.TeleBot(bot_token)
+bot = Bot(token=bot_token)
+dp = Dispatcher(bot)
 
 # MongoDB setup
 client = AsyncIOMotorClient("mongodb+srv://itachiuchihablackcops:5412ascs@gamebot.dfp9j.mongodb.net/?retryWrites=true&w=majority&appName=GameBot")
@@ -39,9 +26,9 @@ collection = db["flappybird"]
 async def check_mongo_connection():
     try:
         await client.admin.command('ping')
-        logger.info("MongoDB connected successfully.")
+        logging.info("MongoDB connected successfully.")
     except Exception as e:
-        logger.error(f"Error connecting to MongoDB: {e}")
+        logging.error(f"Error connecting to MongoDB: {e}")
 
 # Define the data model
 class UserData(BaseModel):
@@ -58,12 +45,12 @@ async def update_score(user_data: UserData):
         result = await collection.insert_one(user_data.dict())
         return {"message": "Score updated successfully", "inserted_id": str(result.inserted_id)}
     except Exception as e:
-        logger.error(f"Error updating score: {e}")
+        logging.error(f"Error updating score: {e}")
         return {"message": "Error updating score", "error": str(e)}
 
 # Function to fetch leaderboard from MongoDB (async)
 async def fetch_leaderboard():
-    logger.info("Fetching leaderboard from MongoDB...")
+    logging.info("Fetching leaderboard from MongoDB...")
     
     pipeline = [
         {"$sort": {"score": -1}},
@@ -73,31 +60,28 @@ async def fetch_leaderboard():
     ]
     try:
         leaderboard = await collection.aggregate(pipeline).to_list(length=10)
-        logger.info(f"Leaderboard fetched successfully: {len(leaderboard)} entries")
+        logging.info(f"Leaderboard fetched successfully: {len(leaderboard)} entries")
         return leaderboard
     except Exception as e:
-        logger.error(f"Error fetching leaderboard from MongoDB: {str(e)}")
+        logging.error(f"Error fetching leaderboard from MongoDB: {str(e)}")
         return None
 
-# Start command handler for Telegram bot
-@bot.message_handler(commands=['start'])
-def start(message):
-    bot.send_message(message.chat.id, "Welcome!")
+# /start command handler for Telegram bot
+@dp.message_handler(commands=['start'])
+async def start(message: Message):
+    await message.answer("Welcome!")
 
-# Leaderboard command handler for Telegram bot
-# Leaderboard command handler for Telegram bot (corrected)
-@bot.message_handler(commands=['leaderboard'])
-def leaderboard(message: Message):
+# /leaderboard command handler for Telegram bot
+@dp.message_handler(commands=['leaderboard'])
+async def leaderboard(message: Message):
     try:
-        logger.info("Leaderboard command received")
+        logging.info("Leaderboard command received")
         
-        # Use an async event loop to fetch leaderboard
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        leaderboard_data = loop.run_until_complete(fetch_leaderboard())
+        # Fetch leaderboard asynchronously
+        leaderboard_data = await fetch_leaderboard()
         
         if not leaderboard_data:
-            logger.info("No leaderboard data found")
+            logging.info("No leaderboard data found")
             msg = "No scores available yet."
         else:
             msg = "Flappy Bird Leaderboard:\n"
@@ -113,21 +97,18 @@ def leaderboard(message: Message):
                 msg += f"{i+1}. {entry['name']} {emoji} - {entry['score']}\n"
         
         # Send the message with Markdown formatting
-        bot.send_message(message.chat.id, msg, parse_mode="Markdown")
-        logger.info("Leaderboard message sent")
+        await message.answer(msg, parse_mode="Markdown")
+        logging.info("Leaderboard message sent")
 
     except Exception as e:
-        logger.error(f"Error handling leaderboard command: {str(e)}")
-        bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
+        logging.error(f"Error handling leaderboard command: {str(e)}")
+        await message.answer(f"Error fetching leaderboard: {str(e)}")
 
-
-# Run the Telegram bot in a separate thread
-def run_bot():
-    bot.polling()
-
-# Start the bot in a separate thread to avoid blocking FastAPI
-threading.Thread(target=run_bot, daemon=True).start()
-
-# Run FastAPI app
+# Run FastAPI and aiogram together
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=10000, reload=True)
+    # Run FastAPI in the background
+    loop = asyncio.get_event_loop()
+    loop.create_task(uvicorn.run(app, host="0.0.0.0", port=10000, reload=True))
+    
+    # Run aiogram bot
+    executor.start_polling(dp, skip_updates=True)
