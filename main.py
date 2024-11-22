@@ -88,11 +88,14 @@ def start(message):
 
 # Function to escape MarkdownV2 special characters
 def escape_markdown_v2(text: str) -> str:
-    # Define a list of special characters to escape in MarkdownV2
+    # List of special characters that need escaping in MarkdownV2
     special_chars = r'[_*[\]()~`>#+-=|{}.!]'
 
     # Escape each special character by adding a backslash before it
-    return re.sub(f'([{"".join(special_chars)}])', r'\\\1', text)
+    # Use re.escape to escape all special characters in the list
+    escaped_text = re.sub(r'([_*\[\]()~`>#+\-=\|{}.!])', r'\\\1', text)
+    
+    return escaped_text
 
 # Leaderboard command handler for Telegram bot
 @bot.message_handler(commands=['leaderboard'])
