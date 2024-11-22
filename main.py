@@ -32,10 +32,6 @@ bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
 
 # Set the default properties for the bot
 default_properties = DefaultBotProperties(parse_mode=ParseMode.MARKDOWN)
-bot = Bot(token=bot_token, default=default_properties)  # Set default properties
-
-# Dispatcher initialization in aiogram 3.x+
-dp = Dispatcher(bot=bot)  # Use keyword argument for bot
 
 # MongoDB setup
 client = AsyncIOMotorClient("mongodb+srv://itachiuchihablackcops:5412ascs@gamebot.dfp9j.mongodb.net/?retryWrites=true&w=majority&appName=GameBot")
@@ -122,12 +118,16 @@ async def fetch_leaderboard():
 
 # Run the Telegram bot and FastAPI app together
 async def run_bot_and_app():
+    # Initialize the bot and dispatcher here
+    bot = Bot(token=bot_token, default=default_properties)  # Bot initialization
+    dp = Dispatcher(bot=bot)  # Dispatcher initialization
+
     # Start FastAPI server
     config = uvicorn.Config(app, host="0.0.0.0", port=10000)
     server = uvicorn.Server(config)
 
     # Start Telegram bot polling in a task
-    asyncio.create_task(dp.start_polling())
+    asyncio.create_task(dp.start_polling())  # Start polling directly in the background
 
     # Run FastAPI app server
     await server.serve()
