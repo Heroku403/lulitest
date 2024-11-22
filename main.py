@@ -115,9 +115,7 @@ async def fetch_leaderboard():
 @bot.message_handler(commands=['leaderboard'])
 def leaderboard(message: Message):
     try:
-        # Run the async fetch_leaderboard function using the event loop
         leaderboard_data = asyncio.run(fetch_leaderboard())
-
         if not leaderboard_data:
             msg = "No scores available yet."
         else:
@@ -130,11 +128,7 @@ def leaderboard(message: Message):
                     emoji = "🥈"
                 elif i == 2:
                     emoji = "🥉"
-                
-                # Directly include the name and score without escaping special characters
                 msg += f"{i+1}. {entry['name']} {emoji} - {entry['score']}\n"
-
-        # Send the message with MarkdownV2 formatting
         bot.send_message(message.chat.id, msg, parse_mode="Markdown")
     except Exception as e:
         bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
