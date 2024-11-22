@@ -1,6 +1,7 @@
 import logging
-import asyncio
 import os
+import threading
+import uvicorn
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from aiogram import Bot, Dispatcher, types
 from aiogram.enums import ParseMode
@@ -8,9 +9,8 @@ from aiogram.filters import Command
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi.middleware.cors import CORSMiddleware
-import threading
-import uvicorn
-from pydantic import BaseModel  # Assuming you are using Pydantic for validation
+from pydantic import BaseModel
+import asyncio
 
 # FastAPI app setup
 app = FastAPI()
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 # Telegram bot setup (aiogram 3.x)
 bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-bot = Bot(token=bot_token)
+bot = Bot(token=bot_token, parse_mode=ParseMode.MARKDOWN)
 dp = Dispatcher(bot)
 dp.middleware.setup(LoggingMiddleware())
 
@@ -76,12 +76,12 @@ async def insert_score_to_db(user_data: UserData):
         logger.error(f"Error inserting score for {user_data.first_name}: {e}")
 
 # Command handler for /start
-@dp.message_handler(Command("start"))
+@dp.message(Command("start"))
 async def start(message: types.Message):
     await message.answer("Welcome!")
 
 # Command handler for /leaderboard
-@dp.message_handler(Command("leaderboard"))
+@dp.message(Command("leaderboard"))
 async def leaderboard(message: types.Message):
     try:
         leaderboard_data = await fetch_leaderboard()
@@ -120,7 +120,7 @@ async def fetch_leaderboard():
 # Run the Telegram bot in a separate thread
 def run_bot():
     loop = asyncio.get_event_loop()
-    loop.create_task(dp.start_polling())  # Updated to use dp.start_polling()
+    loop.create_task(dp.start_polling())  # Start polling directly
 
 # Run FastAPI app
 if __name__ == "__main__":
