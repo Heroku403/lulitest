@@ -1,4 +1,7 @@
-fastapi 
-uvicorn 
-pymongo 
+fastapi
+uvicorn
+pydantic
 telebot
+motor
+pymongo
+python-dotenv
