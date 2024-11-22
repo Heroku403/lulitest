@@ -4,6 +4,9 @@ import uvicorn
 import telebot
 from pymongo import MongoClient
 from telebot import types
+from fastapi.middleware.cors import CORSMiddleware
+
+
 
 # Initialize FastAPI app, Telegram bot, and MongoDB client
 app = FastAPI()
