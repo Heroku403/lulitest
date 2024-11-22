@@ -57,16 +57,17 @@ class UserData(BaseModel):
 @app.post("/flappybird-update-score")
 async def update_score(user_data: UserData, background_tasks: BackgroundTasks):
     try:
-        # Use background task to handle database insertion asynchronously
+        # Add task to the background queue to handle database insertion
         background_tasks.add_task(insert_score_to_db, user_data)
-        return {"message": "Score update request received."}
+        return {"message": "Score update request received."}, 200  # Response with HTTP 200 status code
     except Exception as e:
         logger.error(f"Error updating score: {e}")
-        return {"message": "Error updating score", "error": str(e)}
+        raise HTTPException(status_code=500, detail=f"Error updating score: {str(e)}")
 
 # Background task to insert score in MongoDB
 async def insert_score_to_db(user_data: UserData):
     try:
+        # Insert user data into MongoDB
         result = await collection.insert_one(user_data.dict())
         logger.info(f"Score for {user_data.first_name} inserted with ID: {result.inserted_id}")
     except Exception as e:
