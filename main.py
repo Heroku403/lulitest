@@ -86,22 +86,11 @@ def start(message):
 
 
 
-# Function to escape MarkdownV2 special characters
-def escape_markdown_v2(text: str) -> str:
-    # List of special characters that need escaping in MarkdownV2
-    special_chars = r'[_*[\]()~`>#+-=|{}.!]'
-
-    # Escape each special character by adding a backslash before it
-    # Use re.escape to escape all special characters in the list
-    escaped_text = re.sub(r'([_*\[\]()~`>#+\-=\|{}.!])', r'\\\1', text)
-    
-    return escaped_text
-
 # Leaderboard command handler for Telegram bot
 @bot.message_handler(commands=['leaderboard'])
 def leaderboard(message: Message):
     try:
-        # Run the async fetch_leaderboard function
+        # Run the async fetch_leaderboard function using the event loop
         leaderboard_data = asyncio.run(fetch_leaderboard())
 
         if not leaderboard_data:
@@ -117,17 +106,14 @@ def leaderboard(message: Message):
                 elif i == 2:
                     emoji = "🥉"
                 
-                # Escape any special characters in the name or score
-                name = escape_markdown_v2(entry['name'])
-                score = escape_markdown_v2(str(entry['score']))
+                # Directly include the name and score without escaping special characters
+                msg += f"{i+1}. {entry['name']} {emoji} - {entry['score']}\n"
 
-                # Remove bold formatting (no ** around the name)
-                msg += f"{i+1}. {name} {emoji} - {score}\n"
-
-        # Send the message with escaped special characters in MarkdownV2 format
+        # Send the message with MarkdownV2 formatting
         bot.send_message(message.chat.id, msg, parse_mode="MarkdownV2")
     except Exception as e:
         bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
+
 
 
 
