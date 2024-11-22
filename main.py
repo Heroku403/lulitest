@@ -68,12 +68,43 @@ async def update_score(user_data: UserData):
 def start(message):
     bot.send_message(message.chat.id, "Welcome!")
 
+
+
+
+
+
+
+
+
+
+
+
+# Function to fetch leaderboard from MongoDB (async)
+async def fetch_leaderboard():
+    pipeline = [
+        {"$sort": {"score": -1}},
+        {"$group": {
+            "_id": "$user_id",
+            "name": {"$first": "$first_name"},
+            "score": {"$max": "$score"}
+        }},
+        {"$sort": {"score": -1}},
+        {"$limit": 10}
+    ]
+    
+    try:
+        leaderboard = await collection.aggregate(pipeline).to_list(length=10)  # Async aggregation
+        return leaderboard
+    except Exception as e:
+        logger.error(f"Error fetching leaderboard: {str(e)}")
+        return None
+
 # Leaderboard command handler for Telegram bot
 @bot.message_handler(commands=['leaderboard'])
-def leaderboard(message):  # Keep this function synchronous
+async def leaderboard(message: Message):  # Make this function asynchronous
     try:
         # Use asyncio to run the async MongoDB aggregation
-        leaderboard_data = asyncio.run(fetch_leaderboard())
+        leaderboard_data = await fetch_leaderboard()
 
         if not leaderboard_data:
             msg = "No scores available yet."
@@ -92,25 +123,29 @@ def leaderboard(message):  # Keep this function synchronous
                 
                 msg += f"{i+1}. **{entry['name']}** {emoji} - {entry['score']}\n"
 
-        bot.send_message(message.chat.id, msg, parse_mode="MarkdownV2")
+        # Send the message with MarkdownV2 formatting
+        await bot.send_message(message.chat.id, msg, parse_mode="MarkdownV2")
     except Exception as e:
-        bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
+        await bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
 
-# Function to fetch leaderboard from MongoDB (async)
-async def fetch_leaderboard():
-    pipeline = [
-        {"$sort": {"score": -1}},
-        {"$group": {"_id": "$user_id", "name": {"$first": "$first_name"}, "score": {"$max": "$score"}}},
-        {"$sort": {"score": -1}},
-        {"$limit": 10}
-    ]
-    
-    try:
-        leaderboard = await collection.aggregate(pipeline).to_list(length=10)  # Async aggregation
-        return leaderboard
-    except Exception as e:
-        logger.error(f"Error fetching leaderboard: {str(e)}")
-        return None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Run the Telegram bot in a separate thread
 def run_bot():
