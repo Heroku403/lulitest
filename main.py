@@ -7,9 +7,15 @@ from telebot import types
 
 # Initialize FastAPI app, Telegram bot, and MongoDB client
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 bot = telebot.TeleBot("6450878640:AAEkDXKORJvv-530GfG6OZYnZxfZgJ9f_FA")
 client = MongoClient("mongodb+srv://itachiuchihablackcops:5412ascs@gamebot.dfp9j.mongodb.net/?retryWrites=true&w=majority&appName=GameBot")
-db = client["lulli"]
+db = client["skgamebot"]
 collection = db["flappybird"]
 
 # Define data model
