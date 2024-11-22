@@ -5,14 +5,17 @@ from pydantic import BaseModel
 import uvicorn
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import Message
+from aiogram.filters import Command
 from motor.motor_asyncio import AsyncIOMotorClient
-import os
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
 
 # Initialize FastAPI app
 app = FastAPI()
 
 # Telegram bot setup with aiogram
-bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+bot_token = "6450878640:AAEkDXKORJvv-530GfG6OZYnZxfZgJ9f_FA"
 bot = Bot(token=bot_token)
 
 # Initialize Dispatcher
@@ -44,6 +47,7 @@ class UserData(BaseModel):
 async def update_score(user_data: UserData):
     try:
         result = await collection.insert_one(user_data.dict())
+        logging.info(f"Score updated for {user_data.user_id}")
         return {"message": "Score updated successfully", "inserted_id": str(result.inserted_id)}
     except Exception as e:
         logging.error(f"Error updating score: {e}")
@@ -52,7 +56,6 @@ async def update_score(user_data: UserData):
 # Function to fetch leaderboard from MongoDB (async)
 async def fetch_leaderboard():
     logging.info("Fetching leaderboard from MongoDB...")
-    
     pipeline = [
         {"$sort": {"score": -1}},
         {"$group": {"_id": "$user_id", "name": {"$first": "$first_name"}, "score": {"$max": "$score"}}},
@@ -67,12 +70,14 @@ async def fetch_leaderboard():
         logging.error(f"Error fetching leaderboard from MongoDB: {str(e)}")
         return None
 
-# Register /start command handler for Telegram bot
-async def on_start(message: Message):
+# /start command handler for Telegram bot
+@dp.message(Command("start"))
+async def start(message: Message):
     await message.answer("Welcome!")
 
-# Register /leaderboard command handler for Telegram bot
-async def on_leaderboard(message: Message):
+# /leaderboard command handler for Telegram bot
+@dp.message(Command("leaderboard"))
+async def leaderboard(message: Message):
     try:
         logging.info("Leaderboard command received")
         
@@ -103,17 +108,19 @@ async def on_leaderboard(message: Message):
         logging.error(f"Error handling leaderboard command: {str(e)}")
         await message.answer(f"Error fetching leaderboard: {str(e)}")
 
-# Register message handlers using `register_message_handler`
-dp.message_handlers.register(on_start, commands=['start'])
-dp.message_handlers.register(on_leaderboard, commands=['leaderboard'])
-
 # Run FastAPI and aiogram together
+async def on_startup():
+    await check_mongo_connection()
+
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
+
+    # Ensure MongoDB connection before starting the server
+    loop.run_until_complete(on_startup())
 
     # Run FastAPI in the background
     loop.create_task(uvicorn.run(app, host="0.0.0.0", port=10000, reload=True))
 
-    # Run aiogram bot
+    # Run aiogram bot with start_polling
     from aiogram import executor
     executor.start_polling(dp, skip_updates=True)
