@@ -92,7 +92,7 @@ def leaderboard(message):  # Keep this function synchronous
                 
                 msg += f"{i+1}. **{entry['name']}** {emoji} - {entry['score']}\n"
 
-        bot.send_message(message.chat.id, msg)
+        bot.send_message(message.chat.id, msg, parse_mode="MarkdownV2")
     except Exception as e:
         bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
 
