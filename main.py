@@ -1,23 +1,38 @@
 import logging
 import asyncio
-import os
-from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi import FastAPI, Request, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 import uvicorn
-from telegram import Update
-from telegram.ext import Application, CommandHandler, CallbackContext
+import telebot
+from telebot.types import Message
 from motor.motor_asyncio import AsyncIOMotorClient
-from threading import Thread
+from fastapi.middleware.cors import CORSMiddleware
+import threading
+import os
+import re
+from aiogram import Bot, types
+from aiogram.filters import Command
+from aiogram import Router
 
 # Initialize FastAPI app
 app = FastAPI()
 
-# Setup logging
+# Setup CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Initialize logger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Telegram bot setup using python-telegram-bot
+# Telegram bot setup
 bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+bot = telebot.TeleBot(bot_token)
 
 # MongoDB setup
 client = AsyncIOMotorClient("mongodb+srv://itachiuchihablackcops:5412ascs@gamebot.dfp9j.mongodb.net/?retryWrites=true&w=majority&appName=GameBot")
@@ -32,7 +47,7 @@ async def check_mongo_connection():
     except Exception as e:
         logger.error(f"Error connecting to MongoDB: {e}")
 
-# Define the data model for the user score
+# Define the data model
 class UserData(BaseModel):
     score: int
     mongo_id: str
@@ -44,9 +59,9 @@ class UserData(BaseModel):
 @app.post("/flappybird-update-score")
 async def update_score(user_data: UserData, background_tasks: BackgroundTasks):
     try:
-        # Add task to background queue to handle database insertion
+        # Add task to the background queue to handle database insertion
         background_tasks.add_task(insert_score_to_db, user_data)
-        return {"message": "Score update request received."}, 200
+        return {"message": "Score update request received."}, 200  # Response with HTTP 200 status code
     except Exception as e:
         logger.error(f"Error updating score: {e}")
         raise HTTPException(status_code=500, detail=f"Error updating score: {str(e)}")
@@ -54,10 +69,32 @@ async def update_score(user_data: UserData, background_tasks: BackgroundTasks):
 # Background task to insert score in MongoDB
 async def insert_score_to_db(user_data: UserData):
     try:
+        # Insert user data into MongoDB
         result = await collection.insert_one(user_data.dict())
         logger.info(f"Score for {user_data.first_name} inserted with ID: {result.inserted_id}")
     except Exception as e:
         logger.error(f"Error inserting score for {user_data.first_name}: {e}")
+
+# Start command handler for Telegram bot
+@bot.message_handler(commands=['start'])
+def start(message):
+    bot.send_message(message.chat.id, "Welcome!")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Function to fetch leaderboard from MongoDB (async)
 async def fetch_leaderboard():
@@ -72,17 +109,15 @@ async def fetch_leaderboard():
         return leaderboard
     except Exception as e:
         logger.error(f"Error fetching leaderboard: {str(e)}")
-        return []
+        return None
 
-# Command handler for /start
-async def start(update: Update, context: CallbackContext) -> None:
-    await update.message.reply_text("Welcome!")
-
-# Command handler for /leaderboard
-async def leaderboard(update: Update, context: CallbackContext) -> None:
+# Leaderboard command handler for Telegram bot
+@bot.message_handler(commands=['leaderboard'])
+def leaderboard(message: Message):
     try:
-        leaderboard_data = await fetch_leaderboard()
-        
+        # Run the async fetch_leaderboard function using the event loop
+        leaderboard_data = asyncio.run(fetch_leaderboard())
+
         if not leaderboard_data:
             msg = "No scores available yet."
         else:
@@ -95,42 +130,27 @@ async def leaderboard(update: Update, context: CallbackContext) -> None:
                     emoji = "🥈"
                 elif i == 2:
                     emoji = "🥉"
+                
+                # Directly include the name and score without escaping special characters
                 msg += f"{i+1}. {entry['name']} {emoji} - {entry['score']}\n"
-        
-        await update.message.reply_text(msg)
+
+        # Send the message with MarkdownV2 formatting
+        bot.send_message(message.chat.id, msg, parse_mode="Markdown")
     except Exception as e:
-        await update.message.reply_text(f"Error fetching leaderboard: {str(e)}")
+        bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
 
-# Run the Telegram bot asynchronously
-async def run_telegram_bot():
-    # Initialize the bot application
-    application = Application.builder().token(bot_token).build()
 
-    # Add command handlers
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("leaderboard", leaderboard))
 
-    # Start polling the bot (this will run asynchronously)
-    await application.run_polling()
 
-# Main entry function to run FastAPI and Telegram bot
-async def main():
-    # Start FastAPI in the background using uvicorn
-    from fastapi import FastAPI
-    import uvicorn
 
-    # Run FastAPI app in the background using threading
-    def start_fastapi():
-        uvicorn.run(app, host="0.0.0.0", port=10000)
 
-    fastapi_thread = Thread(target=start_fastapi)
-    fastapi_thread.daemon = True
-    fastapi_thread.start()
+# Run the Telegram bot in a separate thread
+def run_bot():
+    bot.polling()
 
-    # Run the Telegram bot in the same event loop as FastAPI
-    await run_telegram_bot()
+# Start the bot in a separate thread to avoid blocking FastAPI
+threading.Thread(target=run_bot, daemon=True).start()
 
-# Entry point for running the app
+# Run FastAPI app
 if __name__ == "__main__":
-    # Start the FastAPI app and Telegram bot with asyncio
-    asyncio.run(main())
+    uvicorn.run("main:app", host="0.0.0.0", port=10000, reload=True)
