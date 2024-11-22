@@ -1,32 +1,18 @@
 import logging
-import os
+import asyncio
+from fastapi import FastAPI, Request, BackgroundTasks, HTTPException
+from pydantic import BaseModel
 import uvicorn
-from fastapi import FastAPI, BackgroundTasks, HTTPException
-from aiogram import Bot, Dispatcher, types
-from aiogram.enums import ParseMode
-from aiogram.filters import Command
+import telebot
+from telebot.types import Message
 from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import asyncio
-from aiogram.client.bot import DefaultBotProperties  # Import DefaultBotProperties
-
-
-
-
-
-import logging
-import asyncio
-from fastapi import FastAPI, BackgroundTasks, HTTPException
-from pydantic import BaseModel
-import uvicorn
+import threading
+import os
+import re
 from aiogram import Bot, types
 from aiogram.filters import Command
 from aiogram import Router
-import threading
-import os
-from motor.motor_asyncio import AsyncIOMotorClient
-from fastapi.middleware.cors import CORSMiddleware
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -44,10 +30,9 @@ app.add_middleware(
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Telegram bot setup (using aiogram 3.x)
+# Telegram bot setup
 bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-bot = Bot(token=bot_token)
-router = Router()
+bot = telebot.TeleBot(bot_token)
 
 # MongoDB setup
 client = AsyncIOMotorClient("mongodb+srv://itachiuchihablackcops:5412ascs@gamebot.dfp9j.mongodb.net/?retryWrites=true&w=majority&appName=GameBot")
@@ -89,15 +74,6 @@ async def insert_score_to_db(user_data: UserData):
         logger.info(f"Score for {user_data.first_name} inserted with ID: {result.inserted_id}")
     except Exception as e:
         logger.error(f"Error inserting score for {user_data.first_name}: {e}")
-
-
-
-
-
-
-
-
-
 
 # Start command handler for Telegram bot
 @bot.message_handler(commands=['start'])
