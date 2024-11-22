@@ -1,14 +1,15 @@
+import logging
 import asyncio
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
 import uvicorn
-import telebot
-from pymongo import MongoClient
+from telebot import TeleBot
+from telebot.types import Message
 from motor.motor_asyncio import AsyncIOMotorClient
-import logging
 from fastapi.middleware.cors import CORSMiddleware
 import threading
 import os
+
 
 # Initialize FastAPI app
 app = FastAPI()
