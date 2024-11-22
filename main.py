@@ -3,16 +3,13 @@ import asyncio
 from fastapi import FastAPI, Request, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 import uvicorn
-import telebot
-from telebot.types import Message
+from telegram import Update
+from telegram.ext import Application, CommandHandler, CallbackContext
 from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi.middleware.cors import CORSMiddleware
 import threading
 import os
 import re
-from aiogram import Bot, types
-from aiogram.filters import Command
-from aiogram import Router
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -30,9 +27,8 @@ app.add_middleware(
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Telegram bot setup
+# Telegram bot setup using python-telegram-bot
 bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-bot = telebot.TeleBot(bot_token)
 
 # MongoDB setup
 client = AsyncIOMotorClient("mongodb+srv://itachiuchihablackcops:5412ascs@gamebot.dfp9j.mongodb.net/?retryWrites=true&w=majority&appName=GameBot")
@@ -75,27 +71,6 @@ async def insert_score_to_db(user_data: UserData):
     except Exception as e:
         logger.error(f"Error inserting score for {user_data.first_name}: {e}")
 
-# Start command handler for Telegram bot
-@bot.message_handler(commands=['start'])
-def start(message):
-    bot.send_message(message.chat.id, "Welcome!")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # Function to fetch leaderboard from MongoDB (async)
 async def fetch_leaderboard():
     pipeline = [
@@ -111,12 +86,15 @@ async def fetch_leaderboard():
         logger.error(f"Error fetching leaderboard: {str(e)}")
         return None
 
-# Leaderboard command handler for Telegram bot
-@bot.message_handler(commands=['leaderboard'])
-def leaderboard(message: Message):
+# Command handler for /start
+async def start(update: Update, context: CallbackContext) -> None:
+    await update.message.reply_text("Welcome!")
+
+# Command handler for /leaderboard
+async def leaderboard(update: Update, context: CallbackContext) -> None:
     try:
         # Run the async fetch_leaderboard function using the event loop
-        leaderboard_data = asyncio.run(fetch_leaderboard())
+        leaderboard_data = await fetch_leaderboard()
 
         if not leaderboard_data:
             msg = "No scores available yet."
@@ -135,16 +113,20 @@ def leaderboard(message: Message):
                 msg += f"{i+1}. {entry['name']} {emoji} - {entry['score']}\n"
 
         # Send the message with MarkdownV2 formatting
-        bot.send_message(message.chat.id, msg, parse_mode="Markdown")
+        await update.message.reply_text(msg)
     except Exception as e:
-        bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
+        await update.message.reply_text(f"Error fetching leaderboard: {str(e)}")
 
-
-
-
-# Run the Telegram bot in a separate thread
+# Run the Telegram bot
 def run_bot():
-    bot.polling()
+    application = Application.builder().token(bot_token).build()
+
+    # Add handlers for /start and /leaderboard commands
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("leaderboard", leaderboard))
+
+    # Start polling the bot
+    application.run_polling()
 
 # Start the bot in a separate thread to avoid blocking FastAPI
 threading.Thread(target=run_bot, daemon=True).start()
