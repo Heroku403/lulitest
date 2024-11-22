@@ -6,6 +6,7 @@ from pymongo import MongoClient
 from telebot import types
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+import logging
 
 
 
@@ -21,6 +22,18 @@ bot = telebot.TeleBot("6450878640:AAEkDXKORJvv-530GfG6OZYnZxfZgJ9f_FA")
 client = AsyncIOMotorClient("mongodb+srv://itachiuchihablackcops:5412ascs@gamebot.dfp9j.mongodb.net/?retryWrites=true&w=majority&appName=GameBot")
 db = client["skgamebot"]
 collection = db["flappybird"]
+
+
+# MongoDB connection check function
+async def check_mongo_connection():
+    try:
+        # Ping the MongoDB server to verify connection
+        await client.admin.command('ping')
+        logger.info("MongoDB connected successfully.")
+    except Exception as e:
+        logger.error(f"Error connecting to MongoDB: {e}")
+
+
 
 # Define data model
 class UserData(BaseModel):
