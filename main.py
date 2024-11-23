@@ -79,7 +79,7 @@ def insert_score_to_db(user_data: UserData):
 # Start command handler for Telegram bot
 @bot.message_handler(commands=['start'])
 def start(message):
-    bot.send_message(message.chat.id, "Welcome!")  # Corrected the link to use message.chat.id
+    bot.send_message(message.chat.id, "Welcome!!")  # Corrected the link to use message.chat.id
 
 # Scoreboard command handler for Telegram bot
 @bot.message_handler(commands=["scoreboard", "scoreboard@game_test_robot"])
