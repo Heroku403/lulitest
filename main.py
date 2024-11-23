@@ -38,7 +38,7 @@ bot = telebot.TeleBot(bot_token)
 # MongoDB setup 
 client = pymongo.MongoClient("mongodb+srv://itachiuchihablackcops:5412ascs@gamebot.dfp9j.mongodb.net/?retryWrites=true&w=majority&appName=GameBot")
 db = client["skgamebot"]
-group_collection = db.flappybird
+collection = db["flappybird"]
 
 # MongoDB connection check
 def check_mongo_connection():
