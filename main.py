@@ -111,15 +111,16 @@ async def get_top_scorers(chat_id: str):
     ]
     top_scorers = group_collection.aggregate(pipeline)
     scorers_list = []
+    
     for scorer in top_scorers:
-
-user_data = group_collection.find_one({"user_id": scorer["_id"]})
+        user_data = group_collection.find_one({"user_id": scorer["_id"]})
         scorers_list.append({
             "user_id": scorer["_id"],
             "user_first_name": user_data["user_first_name"],
             "score": scorer["score"]
         })
-    return {"top_scorers": scorers_list} 
+    
+    return {"top_scorers": scorers_list}
 
 def run_bot():
     bot.polling()
