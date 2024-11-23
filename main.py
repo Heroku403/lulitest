@@ -1,5 +1,6 @@
 import logging 
 import pymongo
+from pymongo.errors import PyMongoError
 import asyncio
 from fastapi import FastAPI, Request, BackgroundTasks, HTTPException
 from pydantic import BaseModel
