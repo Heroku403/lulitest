@@ -86,55 +86,131 @@ def start(message):
 def scoreboard(message):
     if message.chat.type in ["group", "supergroup"]:
         chat_id = message.chat.id  # Use the chat ID from the message object
+        
+        # Pipeline to get the top 10 scorers
         pipeline = [
-            {"$match": {"chat_id": chat_id}},  # Filter by the current chat
-            {"$group": {"_id": "$user_id", "score": {"$max": "$score"}}},  # Group by user_id and get the max score
-            {"$sort": {"score": -1}},  # Sort scores in descending order
-            {"$limit": 5},  # Limit to top 5 scorers
+            {"$match": {"chat_id": chat_id}},  # Match the chat_id
+            {"$group": {"_id": "$user_id", "score": {"$max": "$score"}}},  # Group by user_id and get the highest score
+            {"$sort": {"score": -1}},  # Sort by score in descending order
+            {"$limit": 10}  # Limit to the top 10 scorers
         ]
 
         try:
             top_scorers = group_collection.aggregate(pipeline)
             scorers_list = []
-            
-            for scorer in top_scorers:
-                # Get the user data (first name, last name) for each scorer
+            requesting_user = str(message.from_user.id)  # Get the user ID of the person who requested the scoreboard
+            rank_of_requesting_user = None
+            score_of_requesting_user = None
+
+            # Loop through the top scorers and format the message
+            for idx, scorer in enumerate(top_scorers):
+                # Fetch user data for each scorer (first name, last name, etc.)
                 user_data = group_collection.find_one({"user_id": scorer["_id"]})
                 if user_data:
-                    # Ensure the score is treated as an integer
-                    scorers_list.append(f"{user_data['first_name']} - {int(scorer['score'])}")
-                
-            if scorers_list:
-                bot.send_message(message.chat.id, "Top Scorers:\n" + "\n".join(scorers_list))
+                    rank = idx + 1
+                    score = int(scorer["score"])  # Ensure score is treated as an integer
+
+                    # Add emojis for the top 3 users
+                    if rank == 1:
+                        emoji = "🥇"
+                    elif rank == 2:
+                        emoji = "🥈"
+                    elif rank == 3:
+                        emoji = "🥉"
+                    else:
+                        emoji = ""
+
+                    # Add to the scorers list
+                    scorers_list.append(f"{user_data['first_name']} {emoji} - {score}")
+
+                    # Check if the requesting user is in the top 10
+                    if str(scorer["_id"]) == requesting_user:
+                        rank_of_requesting_user = rank
+                        score_of_requesting_user = score
+
+            # Handle the case where the requesting user is not in the top 10
+            if rank_of_requesting_user is None:
+                # Fetch the user's rank and score if they're not in the top 10
+                user_data = group_collection.find_one({"user_id": requesting_user})
+                if user_data:
+                    score_of_requesting_user = user_data["score"]
+                    # Find the rank of the requesting user
+                    user_rank_pipeline = [
+                        {"$match": {"chat_id": chat_id}},  # Match the chat_id
+                        {"$group": {"_id": "$user_id", "score": {"$max": "$score"}}},  # Group by user_id and get the highest score
+                        {"$sort": {"score": -1}}  # Sort by score in descending order
+                    ]
+                    rank_data = group_collection.aggregate(user_rank_pipeline)
+                    rank_of_requesting_user = sum(1 for r in rank_data if r["_id"] == requesting_user) + 1
+
+            # Send the top scorers list
+            bot.send_message(message.chat.id, "Top 10 Scorers:\n" + "\n".join(scorers_list))
+            
+            # Add a blank line
+            bot.send_message(message.chat.id, "\n")
+
+            # If the requesting user is not in the top 10, display their rank and score
+            if rank_of_requesting_user is not None:
+                bot.send_message(
+                    message.chat.id,
+                    f"Your Rank: #{rank_of_requesting_user} with a score of {score_of_requesting_user}",
+                )
             else:
-                bot.send_message(message.chat.id, "No top scorers found.")
-                
+                bot.send_message(
+                    message.chat.id,
+                    f"Your score is {score_of_requesting_user}. You are not in the top 10.",
+                )
+
         except Exception as e:
             bot.send_message(message.chat.id, f"Error fetching scoreboard: {str(e)}")
 
-
-# GET endpoint to retrieve top scorers 
 @app.get("/")
 @app.get("/get-top-scorers/{chat_id}")
 async def get_top_scorers(chat_id: str):
-    pipeline = [
-        {"$match": {"chat_id": int(chat_id)}},
-        {"$group": {"_id": "$user_id", "score": {"$max": "$score"}}},
-        {"$sort": {"score": -1}},
-        {"$limit": 5}
-    ]
-    top_scorers = group_collection.aggregate(pipeline)
-    scorers_list = []
-    
-    for scorer in top_scorers:
-        user_data = group_collection.find_one({"user_id": scorer["_id"]})
-        scorers_list.append({
-            "user_id": scorer["_id"],
-            "user_first_name": user_data["user_first_name"],
-            "score": scorer["score"]
-        })
-    
-    return {"top_scorers": scorers_list}
+    try:
+        # MongoDB aggregation pipeline to fetch top 10 scorers
+        pipeline = [
+            {"$match": {"chat_id": int(chat_id)}},  # Match the chat_id
+            {"$group": {"_id": "$user_id", "score": {"$max": "$score"}}},  # Group by user_id and get the highest score
+            {"$sort": {"score": -1}},  # Sort by score in descending order
+            {"$limit": 10},  # Limit to top 10
+        ]
+        
+        top_scorers = group_collection.aggregate(pipeline)
+        scorers_list = []
+        rank_of_requesting_user = None
+        score_of_requesting_user = None
+
+        for idx, scorer in enumerate(top_scorers):
+            # Fetch user data for each scorer
+            user_data = group_collection.find_one({"user_id": str(scorer["_id"])})
+            if user_data:
+                rank = idx + 1
+                score = int(scorer["score"])
+
+                # Add emojis for the top 3 users
+                if rank == 1:
+                    emoji = "🥇"
+                elif rank == 2:
+                    emoji = "🥈"
+                elif rank == 3:
+                    emoji = "🥉"
+                else:
+                    emoji = ""
+
+                scorers_list.append({
+                    "user_id": scorer["_id"],
+                    "user_first_name": user_data["first_name"],
+                    "score": score,
+                    "emoji": emoji
+                })
+
+        return {"top_scorers": scorers_list}
+
+    except PyMongoError as e:
+        raise HTTPException(status_code=500, detail=f"MongoDB error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 def run_bot():
     bot.polling()
