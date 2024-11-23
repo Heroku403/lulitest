@@ -31,9 +31,9 @@ app.add_middleware(
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(name)
 
-# Telegram bot setup
-#bot_token = os.getenv("")
-bot = telebot.TeleBot("6450878640:AAEkDXKORJvv-530GfG6OZYnZxfZgJ9f_FA")
+# Telegram bot setup 
+bot_token = "6450878640:AAEkDXKORJvv-530GfG6OZYnZxfZgJ9f_FA"
+bot = telebot.TeleBot(bot_token)
 
 # MongoDB setup 
 client = pymongo.MongoClient("mongodb+srv://itachiuchihablackcops:5412ascs@gamebot.dfp9j.mongodb.net/?retryWrites=true&w=majority&appName=GameBot")
