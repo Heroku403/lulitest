@@ -29,7 +29,7 @@ app.add_middleware(
 
 # Initialize logger
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(name)
+logger = logging.getLogger(__name__)
 
 # Telegram bot setup 
 bot_token = "6450878640:AAEkDXKORJvv-530GfG6OZYnZxfZgJ9f_FA"
