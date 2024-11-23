@@ -87,17 +87,31 @@ def scoreboard(message):
     if message.chat.type in ["group", "supergroup"]:
         chat_id = message.chat.id  # Use the chat ID from the message object
         pipeline = [
-            {"$match": {"chat_id": chat_id}},
-            {"$group": {"_id": "$user_id", "score": {"$max": "$score"}}},
-            {"$sort": {"score": -1}},
-            {"$limit": 5}
+            {"$match": {"chat_id": chat_id}},  # Filter by the current chat
+            {"$group": {"_id": "$user_id", "score": {"$max": "$score"}}},  # Group by user_id and get the max score
+            {"$sort": {"score": -1}},  # Sort scores in descending order
+            {"$limit": 5},  # Limit to top 5 scorers
         ]
-        top_scorers = group_collection.aggregate(pipeline)
-        scorers_list = []
-        for scorer in top_scorers:
-            user_data = group_collection.find_one({"user_id": scorer["_id"]})
-            scorers_list.append(f"{user_data['user_first_name']} - {scorer['score']}")
-        bot.send_message(message.chat.id, "Top Scorers:\n" + "\n".join(scorers_list))
+
+        try:
+            top_scorers = group_collection.aggregate(pipeline)
+            scorers_list = []
+            
+            for scorer in top_scorers:
+                # Get the user data (first name, last name) for each scorer
+                user_data = group_collection.find_one({"user_id": scorer["_id"]})
+                if user_data:
+                    # Ensure the score is treated as an integer
+                    scorers_list.append(f"{user_data['first_name']} - {int(scorer['score'])}")
+                
+            if scorers_list:
+                bot.send_message(message.chat.id, "Top Scorers:\n" + "\n".join(scorers_list))
+            else:
+                bot.send_message(message.chat.id, "No top scorers found.")
+                
+        except Exception as e:
+            bot.send_message(message.chat.id, f"Error fetching scoreboard: {str(e)}")
+
 
 # GET endpoint to retrieve top scorers 
 @app.get("/")
