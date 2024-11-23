@@ -1,4 +1,5 @@
-import logging
+import logging 
+import pymongo
 import asyncio
 from fastapi import FastAPI, Request, BackgroundTasks, HTTPException
 from pydantic import BaseModel
@@ -28,26 +29,26 @@ app.add_middleware(
 
 # Initialize logger
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(name)
 
 # Telegram bot setup
-bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-bot = telebot.TeleBot(bot_token)
+#bot_token = os.getenv("")
+bot = telebot.TeleBot("6450878640:AAEkDXKORJvv-530GfG6OZYnZxfZgJ9f_FA")
 
-# MongoDB setup
-client = AsyncIOMotorClient("mongodb+srv://itachiuchihablackcops:5412ascs@gamebot.dfp9j.mongodb.net/?retryWrites=true&w=majority&appName=GameBot")
+# MongoDB setup 
+client = pymongo.MongoClient("mongodb+srv://itachiuchihablackcops:5412ascs@gamebot.dfp9j.mongodb.net/?retryWrites=true&w=majority&appName=GameBot")
 db = client["skgamebot"]
-collection = db["flappybird"]
+group_collection = db.flappybird
 
 # MongoDB connection check
-async def check_mongo_connection():
+def check_mongo_connection():
     try:
-        await client.admin.command('ping')
+        client.admin.command('ping')
         logger.info("MongoDB connected successfully.")
     except Exception as e:
         logger.error(f"Error connecting to MongoDB: {e}")
 
-# Define the data model
+# Define the data model class
 class UserData(BaseModel):
     score: int
     mongo_id: str
@@ -57,7 +58,7 @@ class UserData(BaseModel):
 
 # POST endpoint to update score
 @app.post("/flappybird-update-score")
-async def update_score(user_data: UserData, background_tasks: BackgroundTasks):
+def update_score(user_data: UserData, background_tasks: BackgroundTasks):
     try:
         # Add task to the background queue to handle database insertion
         background_tasks.add_task(insert_score_to_db, user_data)
@@ -67,10 +68,10 @@ async def update_score(user_data: UserData, background_tasks: BackgroundTasks):
         raise HTTPException(status_code=500, detail=f"Error updating score: {str(e)}")
 
 # Background task to insert score in MongoDB
-async def insert_score_to_db(user_data: UserData):
+def insert_score_to_db(user_data: UserData):
     try:
         # Insert user data into MongoDB
-        result = await collection.insert_one(user_data.dict())
+        result = collection.insert_one(user_data.dict())
         logger.info(f"Score for {user_data.first_name} inserted with ID: {result.inserted_id}")
     except Exception as e:
         logger.error(f"Error inserting score for {user_data.first_name}: {e}")
@@ -78,79 +79,54 @@ async def insert_score_to_db(user_data: UserData):
 # Start command handler for Telegram bot
 @bot.message_handler(commands=['start'])
 def start(message):
-    bot.send_message(message.chat.id, "Welcome!")
+    bot.send_message(message.chat.id, "Welcome!")  # Corrected the link to use message.chat.id
 
+# Scoreboard command handler for Telegram bot
+@bot.message_handler(commands=["scoreboard", "scoreboard@game_test_robot"])
+def scoreboard(message):
+    if message.chat.type in ["group", "supergroup"]:
+        chat_id = message.chat.id  # Use the chat ID from the message object
+        pipeline = [
+            {"$match": {"chat_id": chat_id}},
+            {"$group": {"_id": "$user_id", "score": {"$max": "$score"}}},
+            {"$sort": {"score": -1}},
+            {"$limit": 5}
+        ]
+        top_scorers = group_collection.aggregate(pipeline)
+        scorers_list = []
+        for scorer in top_scorers:
+            user_data = group_collection.find_one({"user_id": scorer["_id"]})
+            scorers_list.append(f"{user_data['user_first_name']} - {scorer['score']}")
+        bot.send_message(message.chat.id, "Top Scorers:\n" + "\n".join(scorers_list))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Function to fetch leaderboard from MongoDB (async)
-async def fetch_leaderboard():
+# GET endpoint to retrieve top scorers 
+@app.get("/")
+@app.get("/get-top-scorers/{chat_id}")
+async def get_top_scorers(chat_id: str):
     pipeline = [
+        {"$match": {"chat_id": int(chat_id)}},
+        {"$group": {"_id": "$user_id", "score": {"$max": "$score"}}},
         {"$sort": {"score": -1}},
-        {"$group": {"_id": "$user_id", "name": {"$first": "$first_name"}, "score": {"$max": "$score"}}},
-        {"$sort": {"score": -1}},
-        {"$limit": 10}
+        {"$limit": 5}
     ]
-    try:
-        leaderboard = await collection.aggregate(pipeline).to_list(length=10)
-        return leaderboard
-    except Exception as e:
-        logger.error(f"Error fetching leaderboard: {str(e)}")
-        return None
+    top_scorers = group_collection.aggregate(pipeline)
+    scorers_list = []
+    for scorer in top_scorers:
 
-# Leaderboard command handler for Telegram bot
-@bot.message_handler(commands=['leaderboard'])
-def leaderboard(message: Message):
-    try:
-        # Run the async fetch_leaderboard function using the event loop
-        leaderboard_data = asyncio.run(fetch_leaderboard())
+user_data = group_collection.find_one({"user_id": scorer["_id"]})
+        scorers_list.append({
+            "user_id": scorer["_id"],
+            "user_first_name": user_data["user_first_name"],
+            "score": scorer["score"]
+        })
+    return {"top_scorers": scorers_list} 
 
-        if not leaderboard_data:
-            msg = "No scores available yet."
-        else:
-            msg = "Flappy Bird Leaderboard:\n"
-            for i, entry in enumerate(leaderboard_data):
-                emoji = ""
-                if i == 0:
-                    emoji = "👑"
-                elif i == 1:
-                    emoji = "🥈"
-                elif i == 2:
-                    emoji = "🥉"
-                
-                # Directly include the name and score without escaping special characters
-                msg += f"{i+1}. {entry['name']} {emoji} - {entry['score']}\n"
-
-        # Send the message with MarkdownV2 formatting
-        bot.send_message(message.chat.id, msg, parse_mode="Markdown")
-    except Exception as e:
-        bot.send_message(message.chat.id, f"Error fetching leaderboard: {str(e)}")
-
-
-
-
-
-
-# Run the Telegram bot in a separate thread
 def run_bot():
     bot.polling()
 
-# Start the bot in a separate thread to avoid blocking FastAPI
-threading.Thread(target=run_bot, daemon=True).start()
-
-# Run FastAPI app
-if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=10000, reload=True)
+if name == "main":
+    bot_thread = threading.Thread(target=run_bot)
+    bot_thread.daemon = True
+    bot_thread.start()
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=10000)
