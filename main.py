@@ -125,7 +125,7 @@ async def get_top_scorers(chat_id: str):
 def run_bot():
     bot.polling()
 
-if name == "main":
+if __name__ == "__main__":
     bot_thread = threading.Thread(target=run_bot)
     bot_thread.daemon = True
     bot_thread.start()
